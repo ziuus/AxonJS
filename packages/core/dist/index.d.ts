@@ -1,11 +1,14 @@
-interface Tool<TArgs = any, TResult = any> {
+import { z } from 'zod';
+
+interface Tool<TArgs extends z.ZodTypeAny = any, TResult = any> {
     name: string;
     description: string;
-    schema?: Record<string, any>;
-    execute: (args: TArgs) => Promise<TResult> | TResult;
+    schema: TArgs;
+    execute: (args: z.infer<TArgs>) => Promise<TResult> | TResult;
 }
 interface AgentConfig {
     llmProvider: 'openai' | 'mock';
+    apiKey?: string;
     memory?: 'session' | 'none';
 }
 interface AgentResponse {
@@ -21,7 +24,7 @@ declare class ToolRegistry {
     /**
      * Registers a new tool that the AI agent can call.
      */
-    register<TArgs = any, TResult = any>(tool: Tool<TArgs, TResult>): void;
+    register<TArgs extends z.ZodTypeAny = any, TResult = any>(tool: Tool<TArgs, TResult>): void;
     /**
      * Gets a tool by name.
      */
@@ -31,7 +34,7 @@ declare class ToolRegistry {
      */
     getAllTools(): Tool[];
     /**
-     * Executes a tool dynamically.
+     * Executes a tool with strict Zod validation.
      */
     execute(name: string, args: any): Promise<any>;
 }
@@ -43,15 +46,19 @@ declare class Agent {
     /**
      * Helper to register a tool directly on the agent's registry.
      */
-    registerTool<TArgs = any, TResult = any>(tool: Tool<TArgs, TResult>): void;
+    registerTool<TArgs extends z.ZodTypeAny = any, TResult = any>(tool: Tool<TArgs, TResult>): void;
     /**
      * Primary method to trigger the agent's reasoning loop.
      */
     run(prompt: string, context?: any): Promise<AgentResponse>;
     /**
-     * A mock execution loop for local testing without an API key.
+     * Translates the Axon Tool Registry into the format expected by the AI SDK.
      */
-    private mockRun;
+    private getAITools;
+    /**
+     * The real execution loop using OpenAI via the AI SDK.
+     */
+    private runOpenAI;
 }
 declare function createAgent(config: AgentConfig): Agent;
 

@@ -15,5 +15,11 @@
   "devDependencies": {
     "tsup": "^8.0.2",
     "typescript": "^5.4.5"
+  },
+  "dependencies": {
+    "@ai-sdk/openai": "^3.0.39",
+    "ai": "^6.0.111",
+    "zod": "^4.3.6",
+    "zod-to-json-schema": "^3.25.1"
   }
 }

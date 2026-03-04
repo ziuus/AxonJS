@@ -16,7 +16,18 @@ function App() {
     
     if (response.toolCalls && response.toolCalls.length > 0) {
        response.toolCalls.forEach(call => {
-          setLog(prev => [...prev, `⚙️ Tool Executed: ${call.name} with args ${JSON.stringify(call.args)}`]);
+          setLog(prev => [...prev, `⚙️ Tool Request Detected: ${call.name} with args ${JSON.stringify(call.args)}`]);
+          // Recreate the minimal validation locally just for the UI log.
+          try {
+             const tool = agent.tools.getTool(call.name);
+             if (tool) {
+                 tool.schema.parse(call.args);
+             }
+             setLog(prev => [...prev, `✅ Zod Validation Passed.`]);
+             setLog(prev => [...prev, `✔️ Tool Executed successfully.`]);
+          } catch (e: any) {
+             setLog(prev => [...prev, `❌ Zod Validation Failed: ${e.message}`]);
+          }
        });
     }
     

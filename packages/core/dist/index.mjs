@@ -23,18 +23,22 @@ var ToolRegistry = class {
     return Array.from(this.tools.values());
   }
   /**
-   * Executes a tool dynamically.
+   * Executes a tool with strict Zod validation.
    */
   async execute(name, args) {
     const tool = this.getTool(name);
     if (!tool) {
       throw new Error(`Tool '${name}' not found in registry.`);
     }
-    return tool.execute(args);
+    console.log(`[AxonJS Validation] Validating arguments for ${name}...`);
+    const parsedArgs = tool.schema.parse(args);
+    return tool.execute(parsedArgs);
   }
 };
 
 // src/agent.ts
+import { generateText } from "ai";
+import { createOpenAI } from "@ai-sdk/openai";
 var Agent = class {
   config;
   tools;
@@ -53,30 +57,55 @@ var Agent = class {
    */
   async run(prompt, context) {
     console.log(`[AxonJS] Agent running with prompt: "${prompt}"`);
-    console.log(`[AxonJS] Available tools:`, this.tools.getAllTools().map((t) => t.name));
-    if (this.config.llmProvider === "mock") {
-      return this.mockRun(prompt, context);
+    if (this.config.llmProvider === "openai") {
+      if (!this.config.apiKey) {
+        throw new Error("AxonJS Error: OpenAPI key is missing in config.");
+      }
+      return this.runOpenAI(prompt, context);
     }
-    throw new Error("Only mock provider is implemented in v0.1 playground.");
+    throw new Error(`Provider ${this.config.llmProvider} is not implemented yet.`);
   }
   /**
-   * A mock execution loop for local testing without an API key.
+   * Translates the Axon Tool Registry into the format expected by the AI SDK.
    */
-  async mockRun(prompt, context) {
-    if (prompt.toLowerCase().includes("navigate")) {
-      const toolName = "navigateToPage";
-      if (this.tools.getTool(toolName)) {
-        console.log(`[AxonJS Mock LLM] Decided to call tool: ${toolName}`);
-        const args = { url: "/dashboard" };
-        await this.tools.execute(toolName, args);
-        return {
-          text: "I have navigated you to the dashboard.",
-          toolCalls: [{ name: toolName, args }]
-        };
+  getAITools() {
+    const aiTools = {};
+    for (const tool of this.tools.getAllTools()) {
+      aiTools[tool.name] = {
+        description: tool.description,
+        parameters: tool.schema
+      };
+    }
+    return aiTools;
+  }
+  /**
+   * The real execution loop using OpenAI via the AI SDK.
+   */
+  async runOpenAI(prompt, context) {
+    const openai = createOpenAI({
+      apiKey: this.config.apiKey
+    });
+    const response = await generateText({
+      model: openai("gpt-4o-mini"),
+      system: "You are an intelligent frontend application agent. You have access to tools that control the application state and UI. Use them to fulfill the user request.",
+      prompt,
+      tools: this.getAITools()
+    });
+    const toolCallsFromLLM = [];
+    if (response.toolCalls && response.toolCalls.length > 0) {
+      for (const call of response.toolCalls) {
+        const args = call.args || {};
+        toolCallsFromLLM.push({ name: call.toolName, args });
+        try {
+          await this.tools.execute(call.toolName, args);
+        } catch (error) {
+          console.error(`[AxonJS] Error executing tool ${call.toolName}:`, error);
+        }
       }
     }
     return {
-      text: "I am a mock AI agent. I received your prompt but did not trigger any tools."
+      text: response.text,
+      toolCalls: toolCallsFromLLM
     };
   }
 };

@@ -1,12 +1,15 @@
-export interface Tool<TArgs = any, TResult = any> {
+import { z } from 'zod';
+
+export interface Tool<TArgs extends z.ZodTypeAny = any, TResult = any> {
   name: string;
   description: string;
-  schema?: Record<string, any>; // Simplified generic schema for v0.1
-  execute: (args: TArgs) => Promise<TResult> | TResult;
+  schema: TArgs; // Zod schema is now required for strict validation
+  execute: (args: z.infer<TArgs>) => Promise<TResult> | TResult;
 }
 
 export interface AgentConfig {
-  llmProvider: 'openai' | 'mock'; // Add more later
+  llmProvider: 'openai' | 'mock'; 
+  apiKey?: string; // Required if not using 'mock'
   memory?: 'session' | 'none';
 }
 

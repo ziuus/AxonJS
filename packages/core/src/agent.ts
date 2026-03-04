@@ -1,5 +1,9 @@
 import { AgentConfig, AgentResponse, Tool } from './types';
 import { ToolRegistry } from './tool-registry';
+import { generateText } from 'ai';
+import { createOpenAI } from '@ai-sdk/openai';
+import { zodToJsonSchema } from 'zod-to-json-schema';
+import { z } from 'zod';
 
 export class Agent {
   private config: AgentConfig;
@@ -13,7 +17,7 @@ export class Agent {
   /**
    * Helper to register a tool directly on the agent's registry.
    */
-  registerTool<TArgs = any, TResult = any>(tool: Tool<TArgs, TResult>) {
+  registerTool<TArgs extends z.ZodTypeAny = any, TResult = any>(tool: Tool<TArgs, TResult>) {
     this.tools.register(tool);
   }
 
@@ -22,38 +26,67 @@ export class Agent {
    */
   async run(prompt: string, context?: any): Promise<AgentResponse> {
     console.log(`[AxonJS] Agent running with prompt: "${prompt}"`);
-    console.log(`[AxonJS] Available tools:`, this.tools.getAllTools().map(t => t.name));
 
-    // MOCK LLM IMPLEMENTATION FOR V0.1 LOCAL TESTING
-    if (this.config.llmProvider === 'mock') {
-       return this.mockRun(prompt, context);
+    if (this.config.llmProvider === 'openai') {
+      if (!this.config.apiKey) {
+        throw new Error('AxonJS Error: OpenAPI key is missing in config.');
+      }
+      return this.runOpenAI(prompt, context);
     }
 
-    throw new Error('Only mock provider is implemented in v0.1 playground.');
+    throw new Error(`Provider ${this.config.llmProvider} is not implemented yet.`);
   }
 
   /**
-   * A mock execution loop for local testing without an API key.
+   * Translates the Axon Tool Registry into the format expected by the AI SDK.
    */
-  private async mockRun(prompt: string, context?: any): Promise<AgentResponse> {
-    // If the prompt contains the word "navigate", simulate calling a tool
-    if (prompt.toLowerCase().includes('navigate')) {
-      const toolName = 'navigateToPage';
-      if (this.tools.getTool(toolName)) {
-         console.log(`[AxonJS Mock LLM] Decided to call tool: ${toolName}`);
-         const args = { url: '/dashboard' };
-         // In a real scenario, the LLM just returns the tool request.
-         // Here in the mock, we'll execute it to show the flow.
-         await this.tools.execute(toolName, args);
-         return {
-           text: "I have navigated you to the dashboard.",
-           toolCalls: [{ name: toolName, args }]
-         };
+  private getAITools() {
+    const aiTools: Record<string, any> = {};
+    for (const tool of this.tools.getAllTools()) {
+      aiTools[tool.name] = {
+        description: tool.description,
+        parameters: tool.schema,
+      };
+    }
+    return aiTools;
+  }
+
+  /**
+   * The real execution loop using OpenAI via the AI SDK.
+   */
+  private async runOpenAI(prompt: string, context?: any): Promise<AgentResponse> {
+    const openai = createOpenAI({
+      apiKey: this.config.apiKey,
+    });
+
+    const response = await generateText({
+      model: openai('gpt-4o-mini'),
+      system: 'You are an intelligent frontend application agent. You have access to tools that control the application state and UI. Use them to fulfill the user request.',
+      prompt: prompt,
+      tools: this.getAITools(),
+    });
+
+    // Execute the tools the AI requested locally
+    const toolCallsFromLLM: { name: string; args: any }[] = [];
+    
+    if (response.toolCalls && response.toolCalls.length > 0) {
+      for (const call of response.toolCalls) {
+        // The AI SDK types toolCalls.args as unknown if the schema isn't inferred perfectly
+        // We cast it so we can push it to our log and validator
+        const args = (call as any).args || {};
+        toolCallsFromLLM.push({ name: call.toolName, args });
+        // Let our registry validate and execute the tool
+        try {
+          await this.tools.execute(call.toolName, args);
+        } catch (error) {
+           console.error(`[AxonJS] Error executing tool ${call.toolName}:`, error);
+        }
       }
     }
 
     return {
-      text: "I am a mock AI agent. I received your prompt but did not trigger any tools."
+      text: response.text,
+      toolCalls: toolCallsFromLLM,
     };
   }
 }
