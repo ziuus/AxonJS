@@ -8,6 +8,8 @@ export type AgentElement = {
   text?: string;
   placeholder?: string;
   actionable: boolean;
+  variables?: string; // 3D variables
+  events?: string;    // 3D events
 };
 
 /**
@@ -21,7 +23,7 @@ export function useAgentDOM() {
     // We run a scan whenever the DOM changes using a MutationObserver in a real app,
     // but a simple interval or dependency array works for this MVP.
     const scanDOM = () => {
-      const interactables = document.querySelectorAll('button, input, a, [role="button"], [data-axon-read="true"]');
+      const interactables = document.querySelectorAll('button, input, a, [role="button"], [data-axon-read="true"], [data-axon-3d="true"]');
       const elements: AgentElement[] = [];
 
       interactables.forEach((el) => {
@@ -36,13 +38,23 @@ export function useAgentDOM() {
         if (tagName === 'button' || el.getAttribute('role') === 'button') type = 'button';
         if (tagName === 'input') type = 'input';
         if (tagName === 'a') type = 'link';
+        
+        let is3D = false;
+        let variables, events;
+        if (el.getAttribute('data-axon-3d') === 'true') {
+            type = 'unknown'; // or '3d-scene'
+            is3D = true;
+            variables = el.getAttribute('data-3d-variables') || undefined;
+            events = el.getAttribute('data-3d-events') || undefined;
+        }
 
         elements.push({
           id: el.id,
-          type,
+          type: is3D ? ('3d-scene' as any) : type,
           text: (el as HTMLElement).innerText?.trim() || el.getAttribute('aria-label') || undefined,
           placeholder: (el as HTMLInputElement).placeholder || undefined,
-          actionable: !(el as HTMLButtonElement).disabled
+          actionable: !(el as HTMLButtonElement).disabled || is3D,
+          ...(is3D && { variables, events })
         });
       });
 

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useAgentDOM } from '@axonjs/core/client';
+import SplineScene from './SplineScene';
 
 type Message = { role: 'user' | 'assistant', content: string, toolCalls?: any[] };
 
@@ -40,13 +41,19 @@ export default function ChatDashboard() {
             setMessages(data.messages);
             
             // Check for AI Interaction Signals
-            const lastAssistantMsg = data.messages[data.messages.length - 1];
-            const signalMsg = data.messages.find((m: any) => m.toolCalls?.some((tc: any) => tc.name === 'interactWithScreen'));
+            const signalMsg = data.messages.find((m: any) => m.toolCalls?.some((tc: any) => 
+               tc.name === 'interactWithScreen' || tc.name === 'interactWith3DScene'
+            ));
             
             if (signalMsg) {
-              const interaction = signalMsg.toolCalls.find((tc: any) => tc.name === 'interactWithScreen');
-              if (interaction) {
-                handleAISignal(interaction.args);
+              const domInteraction = signalMsg.toolCalls.find((tc: any) => tc.name === 'interactWithScreen');
+              if (domInteraction) {
+                handleAISignal(domInteraction.args);
+              }
+
+              const sceneInteraction = signalMsg.toolCalls.find((tc: any) => tc.name === 'interactWith3DScene');
+              if (sceneInteraction) {
+                handle3DSignal(sceneInteraction.args);
               }
             }
         } else {
@@ -78,6 +85,25 @@ export default function ChatDashboard() {
         const event = new Event('input', { bubbles: true });
         element.dispatchEvent(event);
       }
+    }
+  };
+
+  const handle3DSignal = (args: any) => {
+    const { sceneId, actionType, target, value } = args;
+    console.log(`[Axon 3D Signal] Executing AI request: ${actionType} on ${target} in ${sceneId}`);
+
+    if (typeof window !== 'undefined' && window.AxonSplineInterop) {
+        if (actionType === 'emitEvent') {
+            window.AxonSplineInterop.emitEvent(target, undefined as any /* Spline API doesn't formally export name lookup nicely always */);
+             // Note: In a real advanced integration, we would pass the specific element ID if multiple existed. 
+             // We fallback to a global emit for this demo.
+             // Actually, let's trigger it directly utilizing target string
+             window.AxonSplineInterop.emitEvent('mouseHover', target); 
+        } else if (actionType === 'setVariable' && value !== undefined) {
+             window.AxonSplineInterop.setVariable(target, value);
+        }
+    } else {
+        console.warn(`[Axon 3D Signal] Global Spline Interop not detected.`);
     }
   };
 
@@ -129,6 +155,9 @@ export default function ChatDashboard() {
             </div>
         </div>
       </header>
+
+      {/* 3D Spline Hero Section */}
+      <SplineScene />
 
       {/* Main Chat Area */}
       <main className="flex-1 overflow-y-auto p-4 md:p-8 flex flex-col items-center" ref={scrollRef}>

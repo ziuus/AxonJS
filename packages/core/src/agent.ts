@@ -31,6 +31,24 @@ export class Agent {
         };
       }
     });
+
+    // Automatically inject the universal 3D Scene tool
+    this.tools.register({
+      name: 'interactWith3DScene',
+      description: 'Interact with a 3D scene embedded in the application. You MUST provide the "sceneId", "actionType" (emitEvent or setVariable), the "target" (the object name or variable name), and an optional "value" if setting a variable.',
+      schema: z.object({
+        sceneId: z.string().describe('The ID or name of the 3D scene canvas'),
+        actionType: z.enum(['emitEvent', 'setVariable']).describe('The kind of operation to perform'),
+        target: z.string().describe('The exact name of the object (for events) or variable (for variables)'),
+        value: z.union([z.string(), z.number()]).optional().describe('The new value if actionType is setVariable, ignored otherwise')
+      }) as any,
+      execute: async ({ sceneId, actionType, target, value }: any) => {
+        return {
+          _axonSignal: '3D_INTERACTION',
+          payload: { sceneId, actionType, target, value }
+        };
+      }
+    });
   }
 
   /**
@@ -96,6 +114,7 @@ You have access to 'interactWithScreen' to control the application.
 You will be provided with a 'Current Live DOM State' in the context as a JSON list.
 To interact with the UI, you MUST find the exact 'id' of the element in that JSON and pass it to 'interactWithScreen'.
 If you are asked about the state (like cart count), look for elements in the DOM state with descriptive text or IDs like 'cart-status'.
+If the DOM state contains 'type: 3d-scene', you can use the 'interactWith3DScene' tool to trigger its available events or variables.
 Always respond to the user after performing actions.`;
 
     const response = await (generateText as any)({
@@ -159,6 +178,7 @@ You have access to 'interactWithScreen' to control the application.
 You will be provided with a 'Current Live DOM State' in the context as a JSON list. 
 To interact with the UI, you MUST find the exact 'id' of the element in that JSON and pass it to 'interactWithScreen'.
 If you are asked about the state (like cart count), look for elements in the DOM state with descriptive text or IDs like 'cart-status'.
+If the DOM state contains 'type: 3d-scene', you can use the 'interactWith3DScene' tool to trigger its available events or variables.
 Always respond to the user after performing actions.`;
 
     const response = await (generateText as any)({
@@ -192,6 +212,7 @@ You have access to 'interactWithScreen' to control the application.
 You will be provided with a 'Current Live DOM State' in the context as a JSON list. 
 To interact with the UI, you MUST find the exact 'id' of the element in that JSON and pass it to 'interactWithScreen'.
 If you are asked about the state (like cart count), look for elements in the DOM state with descriptive text or IDs like 'cart-status'.
+If the DOM state contains 'type: 3d-scene', you can use the 'interactWith3DScene' tool to trigger its available events or variables.
 Always respond to the user after performing actions.`;
 
     const response = await (generateText as any)({
