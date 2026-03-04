@@ -49,6 +49,90 @@ export class Agent {
         };
       }
     });
+
+    // ── NEW HIGH-LEVEL INTEGRATIONS ─────────────────────────────────────────
+
+    // 1. READ text/value from any DOM element by ID
+    this.tools.register({
+      name: 'readScreenText',
+      description: 'Read the current text content or value of any DOM element by its ID. Use this when the user asks about state, counts, values, or any displayed information.',
+      schema: z.object({
+        elementId: z.string().describe('The exact ID of the element to read'),
+      }) as any,
+      execute: async ({ elementId }: any) => {
+        return {
+          _axonSignal: 'READ_ELEMENT',
+          payload: { elementId }
+        };
+      }
+    });
+
+    // 2. NAVIGATE to another URL or route
+    this.tools.register({
+      name: 'navigateTo',
+      description: 'Navigate the browser to a different page, route, or URL. Use when the user asks to go to a different page, section, or route.',
+      schema: z.object({
+        url: z.string().describe('The URL or relative path to navigate to, e.g. "/about" or "https://example.com"'),
+        newTab: z.boolean().optional().describe('If true, open the URL in a new browser tab'),
+      }) as any,
+      execute: async ({ url, newTab }: any) => {
+        return {
+          _axonSignal: 'NAVIGATE',
+          payload: { url, newTab }
+        };
+      }
+    });
+
+    // 3. FILL FORM — set multiple input fields at once
+    this.tools.register({
+      name: 'fillForm',
+      description: 'Fill multiple form fields at once. Provide a list of { elementId, value } pairs to populate inputs, textareas, or selects efficiently.',
+      schema: z.object({
+        fields: z.array(z.object({
+          elementId: z.string().describe('The ID of the input element'),
+          value: z.string().describe('The value to set in the field'),
+        })).describe('List of fields to fill'),
+      }) as any,
+      execute: async ({ fields }: any) => {
+        return {
+          _axonSignal: 'FILL_FORM',
+          payload: { fields }
+        };
+      }
+    });
+
+    // 4. SHOW NOTIFICATION — display a toast/banner message visible to the user
+    this.tools.register({
+      name: 'showNotification',
+      description: 'Display a toast notification or alert message to the user. Use to confirm actions, report results, or communicate status updates.',
+      schema: z.object({
+        message: z.string().describe('The message to display in the notification'),
+        type: z.enum(['success', 'error', 'info', 'warning']).optional().describe('The visual style of the notification'),
+        durationMs: z.number().optional().describe('How many milliseconds to display the notification (default: 3000)'),
+      }) as any,
+      execute: async ({ message, type, durationMs }: any) => {
+        return {
+          _axonSignal: 'SHOW_NOTIFICATION',
+          payload: { message, type: type || 'info', durationMs: durationMs || 3000 }
+        };
+      }
+    });
+
+    // 5. OBSERVE STATE — ask JS to evaluate an expression and get back a value
+    this.tools.register({
+      name: 'observeState',
+      description: 'Evaluate a specific element\'s property or attribute to read runtime state. For example, get the text of an element, check if a checkbox is checked, or read the current value of a select.',
+      schema: z.object({
+        elementId: z.string().describe('The DOM element ID to inspect'),
+        property: z.string().optional().describe('The DOM property to read, e.g. "textContent", "value", "checked", "href". Defaults to "textContent".'),
+      }) as any,
+      execute: async ({ elementId, property }: any) => {
+        return {
+          _axonSignal: 'OBSERVE_STATE',
+          payload: { elementId, property: property || 'textContent' }
+        };
+      }
+    });
   }
 
   /**
