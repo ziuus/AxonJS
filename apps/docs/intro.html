@@ -17,8 +17,6 @@
     <link rel="stylesheet" href="style.css" />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
   </head>
   <body>
     <!-- ── Mobile overlay ──────────────────────────────────────────────────── -->
@@ -57,15 +55,9 @@
         <nav class="sidebar-nav" id="nav">
           <div class="nav-group">
             <div class="nav-group-label">Getting Started</div>
-            <a href="index.html" class="nav-link active" data-page="home"
-              >Introduction</a
-            >
-            <a href="quick-start.html" class="nav-link" data-page="quick-start"
-              >Quick Start</a
-            >
-            <a href="providers.html" class="nav-link" data-page="providers"
-              >Providers</a
-            >
+            <a href="intro.html" class="nav-link" data-page="intro">Introduction</a>
+            <a href="quick-start.html" class="nav-link" data-page="quick-start">Quick Start</a>
+            <a href="providers.html" class="nav-link" data-page="providers">Providers</a>
           </div>
 
           <div class="nav-group">
@@ -241,20 +233,17 @@
         <!-- Top bar -->
         <header class="topbar">
           <button class="menu-btn" onclick="toggleSidebar()">
-            <svg
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-            >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <line x1="3" y1="6" x2="21" y2="6" />
               <line x1="3" y1="12" x2="21" y2="12" />
               <line x1="3" y1="18" x2="21" y2="18" />
             </svg>
           </button>
-          <div class="topbar-breadcrumb">Introduction</div>
+          <div class="topbar-breadcrumb">
+            <a href="index.html" style="color:var(--indigo);text-decoration:none;font-weight:600;">SynapseJS</a>
+            <span style="color:var(--text-3);padding:0 6px">/</span>
+            Introduction
+          </div>
           <div class="topbar-right">
             <button
               class="theme-btn"
