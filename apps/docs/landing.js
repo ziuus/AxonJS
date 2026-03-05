@@ -202,18 +202,34 @@ async function sendMessage() {
     document.querySelectorAll('.card').forEach(c => c.classList.add('synapse-highlight'));
     setTimeout(() => document.querySelectorAll('.card').forEach(c => c.classList.remove('synapse-highlight')), 2500);
 
-  } else if (q.includes('top') || q.includes('hero')) {
-    addMsg('Emitting <strong>SCROLL_TO</strong> signal — navigating to top.', 'ai');
+  } else if ((q.includes('go') || q.includes('open') || q.includes('navigate')) && q.includes('doc')) {
+    addMsg('Navigating to <strong>Documentation</strong>…', 'ai');
+    setTimeout(() => window.location.href = 'intro.html', 600);
+
+  } else if ((q.includes('go') || q.includes('open')) && q.includes('github')) {
+    addMsg('Opening <strong>GitHub</strong> repository…', 'ai');
+    setTimeout(() => window.open('https://github.com/ziuus/SynapseJS', '_blank'), 600);
+
+  } else if ((q.includes('go') || q.includes('open')) && q.includes('showcase')) {
+    addMsg('Navigating to <strong>Showcase</strong>…', 'ai');
+    setTimeout(() => window.location.href = 'showcase.html', 600);
+
+  } else if (q.includes('top') || q.includes('hero') || q.includes('back')) {
+    addMsg('Emitting <strong>SCROLL_TO</strong> signal — back to top.', 'ai');
     window.scrollTo({ top: 0, behavior: 'smooth' });
 
   } else if (q.includes('how') || q.includes('step') || q.includes('work')) {
-    addMsg('Scrolling to <em>How It Works</em> section…', 'ai');
+    addMsg('Scrolling to <em>How It Works</em>…', 'ai');
     document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' });
 
-  } else if (q.includes('stat') || q.includes('number')) {
-    addMsg('Here\'s a snapshot: <strong>20+ tools</strong>, <strong>3 providers</strong>, setup in <strong>5 min</strong>.', 'ai');
+  } else if (q.includes('feature') || q.includes('why')) {
+    addMsg('Scrolling to <em>Features</em>…', 'ai');
+    document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' });
+
+  } else if (q.includes('stat') || q.includes('number') || q.includes('tool')) {
+    addMsg('<strong>20+</strong> built-in DOM tools · <strong>3</strong> AI providers · setup in <strong>&lt;5 min</strong> · <strong>0</strong> config files.', 'ai');
 
   } else {
-    addMsg('I can control this page in real time! Try: <em>"Highlight features"</em>, <em>"Scroll to steps"</em>, or <em>"Go to top"</em>.', 'ai');
+    addMsg('I can navigate and control this page. Try:<br>→ <em>"Go to docs"</em><br>→ <em>"Highlight features"</em><br>→ <em>"Scroll to steps"</em><br>→ <em>"Open GitHub"</em>', 'ai');
   }
 }
