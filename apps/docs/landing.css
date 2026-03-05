@@ -10,6 +10,18 @@
   --heavenly-glow: rgba(255, 255, 255, 0.05);
 }
 
+[data-theme="light"] {
+  --primary: #0d9488; /* Darker Teal for readability */
+  --primary-glow: rgba(13, 148, 136, 0.2);
+  --primary-deep: #0f766e;
+  --bg-dark: #f8fafc;
+  --glass: rgba(255, 255, 255, 0.7);
+  --glass-border: rgba(13, 148, 136, 0.1);
+  --text-main: #0f172a;
+  --text-muted: #475569;
+  --heavenly-glow: rgba(13, 148, 136, 0.03);
+}
+
 * {
   margin: 0;
   padding: 0;
@@ -30,6 +42,11 @@ body {
   inset: 0;
   z-index: -1;
   background: radial-gradient(circle at 50% 50%, #0f172a 0%, #020617 100%);
+  transition: opacity 0.5s ease;
+}
+
+[data-theme="light"] .spatial-bg {
+  opacity: 0.1; /* Let the light --bg-dark show through */
 }
 
 .glow-orb {
@@ -100,6 +117,7 @@ h1, h2, h3 {
   border-radius: 10px;
   font-size: 1.1rem;
   box-shadow: 0 0 20px var(--primary-glow);
+  color: #fff;
 }
 
 .nav-links {
@@ -252,19 +270,24 @@ h1, h2, h3 {
   right: 2rem;
   width: 380px;
   height: 500px;
-  background: rgba(2, 6, 23, 0.8);
+  background: var(--bg-dark);
   backdrop-filter: blur(32px);
   border: 1px solid var(--glass-border);
   border-radius: 24px;
   display: flex;
   flex-direction: column;
   z-index: 1000;
-  box-shadow: 0 30px 60px rgba(0,0,0, 0.5);
+  box-shadow: 0 30px 60px rgba(0,0,0, 0.4);
   overflow: hidden;
   opacity: 0;
   transform: translateY(20px) scale(0.95);
   pointer-events: none;
   transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+[data-theme="light"] #synapse-assistant {
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 30px 60px rgba(0,0,0, 0.1);
 }
 
 #synapse-assistant.active {
@@ -297,6 +320,27 @@ h1, h2, h3 {
   gap: 1rem;
 }
 
+.theme-toggle {
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  color: var(--text-main);
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 101;
+  font-size: 1.2rem;
+  transition: all 0.3s ease;
+}
+
+.theme-toggle:hover {
+  background: rgba(45, 212, 191, 0.1);
+  border-color: var(--primary);
+}
+
 .msg {
   padding: 0.75rem 1rem;
   border-radius: 12px;
@@ -308,6 +352,7 @@ h1, h2, h3 {
   align-self: flex-start;
   background: var(--glass);
   border: 1px solid var(--glass-border);
+  color: var(--text-main);
 }
 
 .msg-user {

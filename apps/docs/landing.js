@@ -33,6 +33,26 @@ if (heroAsset) {
   });
 }
 
+// ── Theme Logic ──────────────────────────────────────────────────────────
+function toggleTheme() {
+  const currentTheme = document.documentElement.getAttribute('data-theme');
+  const targetTheme = currentTheme === 'light' ? 'dark' : 'light';
+  document.documentElement.setAttribute('data-theme', targetTheme);
+  localStorage.setItem('synapse-theme', targetTheme);
+  
+  const icon = document.getElementById('theme-icon');
+  if (icon) icon.textContent = targetTheme === 'light' ? '☀️' : '🌙';
+  console.log(`[SynapseJS] Theme switched to ${targetTheme}`);
+}
+
+// Initialize Theme
+const savedTheme = localStorage.getItem('synapse-theme') || 'dark';
+document.documentElement.setAttribute('data-theme', savedTheme);
+window.addEventListener('DOMContentLoaded', () => {
+  const icon = document.getElementById('theme-icon');
+  if (icon) icon.textContent = savedTheme === 'light' ? '☀️' : '🌙';
+});
+
 // ── Magnetic Buttons ─────────────────────────────────────────────────────
 const magneticEls = document.querySelectorAll('.magnetic');
 magneticEls.forEach((el) => {
@@ -103,7 +123,94 @@ async function sendMessage() {
   }
 }
 
-// ── Hover Orbs ───────────────────────────────────────────────────────────
+// ── Design Spells: Particle Background ──────────────────────────────────────
+const particles = [];
+const particleCount = 40;
+const canvas = document.createElement('canvas');
+const ctx = canvas.getContext('2d');
+canvas.style.position = 'fixed';
+canvas.style.top = '0';
+canvas.style.left = '0';
+canvas.style.width = '100vw';
+canvas.style.height = '100vh';
+canvas.style.pointerEvents = 'none';
+canvas.style.zIndex = '0';
+canvas.style.opacity = '0.5';
+document.body.appendChild(canvas);
+
+function resize() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
+window.addEventListener('resize', resize);
+resize();
+
+class Particle {
+  constructor() {
+    this.reset();
+  }
+  reset() {
+    this.x = Math.random() * canvas.width;
+    this.y = Math.random() * canvas.height;
+    this.size = Math.random() * 2 + 1;
+    this.speedX = (Math.random() - 0.5) * 0.5;
+    this.speedY = (Math.random() - 0.5) * 0.5;
+    this.alpha = Math.random() * 0.5 + 0.1;
+  }
+  update() {
+    this.x += this.speedX;
+    this.y += this.speedY;
+    if (this.x < 0 || this.x > canvas.width || this.y < 0 || this.y > canvas.height) this.reset();
+  }
+  draw() {
+    const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+    ctx.fillStyle = isLight ? `rgba(13, 148, 136, ${this.alpha})` : `rgba(45, 212, 191, ${this.alpha})`;
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+for (let i = 0; i < particleCount; i++) particles.push(new Particle());
+
+function animateParticles() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  particles.forEach(p => {
+    p.update();
+    p.draw();
+  });
+  requestAnimationFrame(animateParticles);
+}
+animateParticles();
+
+// ── Enhanced Magnetic Magic (Design Spells) ──────────────────────────────────
+magneticEls.forEach((el) => {
+  el.addEventListener('mousemove', (e) => {
+    const rect = el.getBoundingClientRect();
+    const x = e.clientX - rect.left - rect.width / 2;
+    const y = e.clientY - rect.top - rect.height / 2;
+    
+    // Physics-based tracking with lag
+    gsap.to(el, { 
+      x: x * 0.45, 
+      y: y * 0.45, 
+      duration: 0.8, 
+      ease: 'power3.out',
+      overwrite: 'auto'
+    });
+    
+    // Magnetic pulse effect
+    if (el.classList.contains('logo') || el.classList.contains('btn-primary')) {
+       gsap.to(el, { scale: 1.05, duration: 0.3 });
+    }
+  });
+  
+  el.addEventListener('mouseleave', () => {
+    gsap.to(el, { x: 0, y: 0, scale: 1, duration: 1.2, ease: 'elastic.out(1, 0.3)' });
+  });
+});
+
+console.log('[SynapseJS] Design Spells: Magnetic Magic & Particles Active. ✨');
 const orbs = document.querySelectorAll('.glow-orb');
 window.addEventListener('mousemove', (e) => {
   const { clientX, clientY } = e;
