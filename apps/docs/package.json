@@ -9,6 +9,7 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@ai-sdk/react": "^3.0.118",
     "@synapsejs/core": "file:../../packages/core",
     "@synapsejs/react": "file:../../packages/react",
     "@types/gsap": "^1.20.2",

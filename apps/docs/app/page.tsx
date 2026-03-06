@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { useChat } from '@ai-sdk/react';
+import { useSynapseDOM, useSynapseSignals } from '@synapsejs/core/client';
 import Link from 'next/link';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
@@ -8,11 +10,47 @@ import './landing.css';
 
 export default function LandingPage() {
   const [isAssistantOpen, setIsAssistantOpen] = useState(false);
-  const [chatMessages, setChatMessages] = useState([
-    { role: 'ai', text: "👋 I'm the SynapseJS demo agent. I can control this page in real time.<br><br>Try: <em>\"Highlight the features\"</em> or <em>\"Scroll to how it works\"</em>" }
-  ]);
-  const [inputValue, setInputValue] = useState('');
   
+  // ── SynapseJS real integration ───────────────────────────────────────────
+  const domElements = useSynapseDOM();
+  const { processSignals } = useSynapseSignals({
+    HIGHLIGHT_ELEMENT: ({ elementId }) => {
+      const el = document.getElementById(elementId);
+      if (el) {
+        el.classList.add('synapse-highlight-active');
+        setTimeout(() => el.classList.remove('synapse-highlight-active'), 3000);
+      }
+    },
+    SCROLL_TO: ({ elementId, top }) => {
+      if (elementId) {
+        document.getElementById(elementId)?.scrollIntoView({ behavior: 'smooth' });
+      } else if (top !== undefined) {
+        window.scrollTo({ top, behavior: 'smooth' });
+      }
+    },
+    NAVIGATE: ({ url }) => {
+      window.location.href = url;
+    }
+  });
+
+  const { messages, input, setInput, append, isLoading } = useChat({
+    api: '/api/chat',
+    body: { domElements },
+    onFinish: (message) => {
+       // Extract and process tool calls from the message if they exist
+       if (message.toolCalls) {
+          processSignals(message.toolCalls as any);
+       }
+    }
+  });
+
+  const chatMessages = messages.length > 0 ? messages.map(m => ({ 
+    role: m.role === 'user' ? 'user' : 'ai', 
+    text: m.content 
+  })) : [
+    { role: 'ai', text: "👋 I'm the SynapseJS demo agent. I can control this page in real time.<br><br>Try: <em>\"Highlight the features\"</em> or <em>\"Take me to the docs\"</em>" }
+  ];
+
   const heroBadgeRef = useRef(null);
   const heroTitleRef = useRef(null);
   const heroDescRef = useRef(null);
@@ -166,36 +204,10 @@ export default function LandingPage() {
     });
   }, []);
 
-  const sendMessage = async () => {
-    if (!inputValue.trim()) return;
-    const userText = inputValue;
-    setChatMessages(prev => [...prev, { role: 'user', text: userText }]);
-    setInputValue('');
-
-    // Simulate AI response
-    setTimeout(async () => {
-      const q = userText.toLowerCase();
-      let response = '';
-
-      if (q.includes('highlight') || q.includes('feature')) {
-        response = 'Emitting <strong>HIGHLIGHT_ELEMENT</strong> signal… ⚡';
-        document.querySelectorAll('.card').forEach(c => c.classList.add('synapse-highlight-active'));
-        setTimeout(() => document.querySelectorAll('.card').forEach(c => c.classList.remove('synapse-highlight-active')), 2500);
-      } else if (q.includes('top') || q.includes('hero') || q.includes('back')) {
-        response = 'Emitting <strong>SCROLL_TO</strong> signal — back to top.';
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-      } else if (q.includes('how') || q.includes('step') || q.includes('work')) {
-        response = 'Scrolling to <em>How It Works</em>…';
-        document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' });
-      } else if (q.includes('feature') || q.includes('why')) {
-        response = 'Scrolling to <em>Features</em>…';
-        document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' });
-      } else {
-        response = "I can navigate and control this page. Try scrolling or highlighting features!";
-      }
-
-      setChatMessages(prev => [...prev, { role: 'ai', text: response }]);
-    }, 600);
+  const handleSend = async () => {
+    if (!input.trim() || isLoading) return;
+    append({ role: 'user', content: input });
+    setInput('');
   };
 
   return (
@@ -418,11 +430,14 @@ export default function LandingPage() {
             id="ai-input"
             type="text"
             placeholder="Ask me to do something…"
-            value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+            disabled={isLoading}
           />
-          <button className="send-btn" onClick={sendMessage}>↑</button>
+          <button className="send-btn" onClick={handleSend} disabled={isLoading}>
+            {isLoading ? '...' : '↑'}
+          </button>
         </div>
       </div>
       

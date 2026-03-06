@@ -34,10 +34,10 @@
     "react-dom": ">=18"
   },
   "dependencies": {
-    "@ai-sdk/google": "^3.0.37",
+    "@ai-sdk/google": "^3.0.43",
     "@ai-sdk/groq": "^3.0.27",
     "@ai-sdk/openai": "^1.1.13",
-    "ai": "^4.1.41",
+    "ai": "^6.0.116",
     "zod": "^3.23.8",
     "zod-to-json-schema": "^3.23.0"
   }
