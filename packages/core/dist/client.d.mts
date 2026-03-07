@@ -1,4 +1,4 @@
-import { A as AgentSignalHandler } from './types-f2mb4mMM.mjs';
+import { A as AgentSignalHandler } from './types-CvL4qYPP.mjs';
 import 'zod';
 
 type AgentElement = {

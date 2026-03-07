@@ -23,6 +23,7 @@ var SYNAPSE_TOOL_NAMES = [
 ];
 
 // src/agent.ts
+import { zodToJsonSchema } from "zod-to-json-schema";
 import { generateText, tool as aiTool } from "ai";
 
 // src/tool-registry.ts
@@ -82,6 +83,11 @@ var ToolRegistry = class {
 // src/agent.ts
 import { createOpenAI } from "@ai-sdk/openai";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
+import { createGroq } from "@ai-sdk/groq";
+import { createAnthropic } from "@ai-sdk/anthropic";
+import { createMistral } from "@ai-sdk/mistral";
+import { createPerplexity } from "@ai-sdk/perplexity";
+import { createCohere } from "@ai-sdk/cohere";
 import { z } from "zod";
 var Agent = class {
   config;
@@ -138,13 +144,14 @@ var Agent = class {
       name: "navigateTo",
       description: "Navigate the browser to a different page, route, or URL. Use when the user asks to go to a different page, section, or route.",
       schema: z.object({
-        url: z.string().describe('The URL or relative path to navigate to, e.g. "/about" or "https://example.com"'),
+        url: z.string().optional().describe('The URL or relative path to navigate to, e.g. "/about"'),
+        path: z.string().optional().describe('The relative path to navigate to, e.g. "/docs"'),
         newTab: z.boolean().optional().describe("If true, open the URL in a new browser tab")
       }),
-      execute: async ({ url, newTab }) => {
+      execute: async ({ url, path, newTab }) => {
         return {
           _synapseSignal: "NAVIGATE",
-          payload: { url, newTab }
+          payload: { url: url || path, newTab }
         };
       }
     });
@@ -233,11 +240,15 @@ var Agent = class {
       name: "highlightElement",
       description: "Visually highlight a specific UI element to draw the user's attention to it. Useful for tutorials, onboarding, and pointing out features.",
       schema: z.object({
-        elementId: z.string().describe("The ID of the element to highlight"),
+        elementId: z.string().optional().describe("The ID of the element to highlight"),
+        id: z.string().optional().describe("The element ID to highlight (alias for elementId)"),
         color: z.string().optional().describe("CSS color for the highlight ring, default is indigo"),
         durationMs: z.number().optional().describe("How long to show the highlight in milliseconds, default 2000")
       }),
-      execute: async (args) => ({ _synapseSignal: "HIGHLIGHT_ELEMENT", payload: args })
+      execute: async (args) => ({
+        _synapseSignal: "HIGHLIGHT_ELEMENT",
+        payload: { ...args, elementId: args.elementId || args.id }
+      })
     });
     this.tools.register({
       name: "waitForElement",
@@ -346,57 +357,51 @@ ${feat.instructions}
    * Primary method to trigger the agent's reasoning loop.
    */
   async run(messages, context) {
-    console.log(`[SynapseJS] AGENT v0.3.0-FEATS running with ${messages.length} messages`);
+    console.log(`[SynapseJS] AGENT running with ${messages.length} messages | Provider: ${this.config.llmProvider}`);
     if (!this.config.apiKey && this.config.llmProvider !== "mock") {
-      throw new Error(`SynapseJS Error: OpenAPI/Gemini key is missing in config.`);
-    }
-    if (this.config.llmProvider === "openai") {
-      return this.runOpenAI(messages, context);
-    }
-    if (this.config.llmProvider === "gemini") {
-      return this.runGemini(messages, context);
+      throw new Error(`SynapseJS Error: API key is missing in config for provider: ${this.config.llmProvider}`);
     }
     if (this.config.llmProvider === "groq") {
       return this.runGroq(messages, context);
     }
-    throw new Error(`Provider ${this.config.llmProvider} is not implemented yet.`);
+    return this.runStandardProvider(messages, context);
   }
   /**
-   * Translates the Axon Tool Registry into the format expected by the AI SDK.
+   * Standard execution loop for providers with robust tool calling support (OpenAI, Anthropic, Gemini, etc.)
    */
-  getAITools() {
-    const aiTools = {};
-    for (const t of this.tools.getAllTools()) {
-      aiTools[t.name] = aiTool({
-        description: t.description,
-        parameters: t.schema || z.object({}),
-        execute: async (args) => {
-          console.log(`[SynapseJS] Tool Executing: ${t.name} | Args:`, JSON.stringify(args));
-          return await this.tools.execute(t.name, args);
-        }
-      });
+  async runStandardProvider(messages, context) {
+    let providerFunc;
+    switch (this.config.llmProvider) {
+      case "openai":
+        providerFunc = createOpenAI({ apiKey: this.config.apiKey });
+        break;
+      case "gemini":
+        providerFunc = createGoogleGenerativeAI({ apiKey: this.config.apiKey });
+        break;
+      case "anthropic":
+        providerFunc = createAnthropic({ apiKey: this.config.apiKey });
+        break;
+      case "mistral":
+        providerFunc = createMistral({ apiKey: this.config.apiKey });
+        break;
+      case "perplexity":
+        providerFunc = createPerplexity({ apiKey: this.config.apiKey });
+        break;
+      case "cohere":
+        providerFunc = createCohere({ apiKey: this.config.apiKey });
+        break;
+      default:
+        providerFunc = createOpenAI({ apiKey: this.config.apiKey });
     }
-    return aiTools;
-  }
-  /**
-   * The semantic execution loop using Google Gemini via the AI SDK.
-   */
-  async runGemini(messages, context) {
-    const google = createGoogleGenerativeAI({
-      apiKey: this.config.apiKey
-    });
-    const defaultSystem = `You are Axon, an intelligent UI Agent. 
-You have access to a suite of tools to control the application.
-You will be provided with a 'Current Live DOM State' in the context as a JSON list. 
-
-CRITICAL: 
-- For specific actions, use specific tools: 'highlightElement' to draw attention, 'scrollTo' to move the page, 'navigateTo' to change routes.
-- Use 'interactWithScreen' with action='click' ONLY if no specific tool fits.
-- Always find the exact 'id' from the DOM state.
-- Respond to the user after performing actions.`;
+    const defaultSystem = `You are Synapse Assistant, an intelligent UI agent.
+You help users by interacting with the page.
+- Always use the available tools to achieve the user's goal.
+- If you are asked to navigate, use 'navigateTo'.
+- If you are asked to show something, use 'highlightElement'.
+- Stay concise, friendly, and helpful.`;
     try {
       const response = await generateText({
-        model: google("gemini-1.5-pro"),
+        model: providerFunc(this.config.model || this.getDefaultModel()),
         system: this.getFullSystemPrompt(defaultSystem),
         messages,
         tools: this.getAITools(),
@@ -406,88 +411,129 @@ CRITICAL:
         (step) => (step.toolCalls || []).map((tc) => ({ name: tc.toolName, args: tc.args }))
       );
       return {
-        text: response.text.trim(),
+        text: response.text.trim() || "Action complete.",
         toolCalls: allToolCalls
       };
     } catch (e) {
-      console.error("[SynapseJS] Agent.runGemini Error:", e);
+      console.error(`[SynapseJS] Agent.runStandardProvider (${this.config.llmProvider}) Error:`, e);
       throw e;
+    }
+  }
+  getDefaultModel() {
+    switch (this.config.llmProvider) {
+      case "openai":
+        return "gpt-4o-mini";
+      case "gemini":
+        return "gemini-1.5-flash";
+      case "anthropic":
+        return "claude-3-5-sonnet-20240620";
+      case "mistral":
+        return "mistral-large-latest";
+      case "perplexity":
+        return "llama-3.1-sonar-large-128k-online";
+      case "cohere":
+        return "command-r-plus";
+      case "groq":
+        return "llama-3.3-70b-versatile";
+      default:
+        return "gpt-4o-mini";
     }
   }
   /**
    * The semantic execution loop using Groq via the AI SDK.
-   */
-  /**
-   * The semantic execution loop using Groq via the AI SDK.
+   * Maintains manual parsing for maximum stability on Llama models.
    */
   async runGroq(messages, context) {
-    const groq = createOpenAI({
-      apiKey: this.config.apiKey,
-      baseURL: "https://api.groq.com/openai/v1"
-    });
-    const defaultSystem = `You are Axon, an intelligent UI Agent. 
-You have access to a suite of tools to control the application.
-You will be provided with a 'Current Live DOM State' in the context as a JSON list. 
-
-CRITICAL: 
-- For specific actions, use specific tools: 'highlightElement' to draw attention, 'scrollTo' to move the page, 'navigateTo' to change routes.
-- Use 'interactWithScreen' with action='click' ONLY if no specific tool fits.
-- Always find the exact 'id' from the DOM state.
-- Respond to the user after performing actions.`;
-    const sanitizedMessages = messages.map((m) => {
-      const cleanMsg = { role: m.role, content: m.content || "" };
-      if (m.toolCalls && m.toolCalls.length > 0) {
-        cleanMsg.toolCalls = m.toolCalls;
-      }
-      return cleanMsg;
-    });
-    const response = await generateText({
-      model: groq("llama-3.3-70b-versatile"),
-      system: this.getFullSystemPrompt(defaultSystem),
-      messages: sanitizedMessages,
-      tools: this.getAITools(),
-      maxSteps: this.config.maxSteps || 5
-    });
-    const allToolCalls = (response.steps || []).flatMap(
-      (step) => (step.toolCalls || []).map((tc) => ({ name: tc.toolName, args: tc.args }))
-    );
-    return {
-      text: response.text.trim(),
-      toolCalls: allToolCalls
-    };
-  }
-  /**
-   * The semantic execution loop using OpenAI via the AI SDK.
-   */
-  async runOpenAI(messages, context) {
-    const openai = createOpenAI({
+    const groq = createGroq({
       apiKey: this.config.apiKey
     });
-    const defaultSystem = `You are Axon, an intelligent UI Agent. 
-You have access to 'interactWithScreen' to control the application.
-You will be provided with a 'Current Live DOM State' in the context as a JSON list. 
-To interact with the UI, you MUST find the exact 'id' of the element in that JSON and pass it to 'interactWithScreen'.
-If you are asked about the state (like cart count), look for elements in the DOM state with descriptive text or IDs like 'cart-status'.
-If the DOM state contains 'type: 3d-scene', you can use the 'interactWith3DScene' tool to trigger its available events or variables.
-Always respond to the user after performing actions.`;
-    const response = await generateText({
-      model: openai(this.config.model || "gpt-4o-mini"),
-      system: this.getFullSystemPrompt(defaultSystem),
-      messages,
-      tools: this.getAITools(),
-      maxSteps: this.config.maxSteps || 5
-    });
-    const allToolCalls = (response.steps || []).flatMap(
-      (step) => (step.toolCalls || []).map((tc) => ({ name: tc.toolName, args: tc.args }))
-    );
-    return {
-      text: response.text.trim(),
-      toolCalls: allToolCalls
-    };
+    const toolDefinitions = this.tools.getAllTools().map((t) => ({
+      name: t.name,
+      description: t.description,
+      parameters: zodToJsonSchema(t.schema)
+    }));
+    const defaultSystem = `You are Synapse Assistant, a specialized UI agent.
+You help users by interacting with the page.
+
+IMPORTANT: To use a tool, you MUST use this exact format at the beginning of your response:
+[TOOL_CALL: {"name": "toolName", "args": { ... }}]
+
+EXAMPLES:
+User: "Show me the features"
+Assistant: [TOOL_CALL: {"name": "highlightElement", "args": {"elementId": "features"}}] I've highlighted the features for you!
+
+AVAILABLE TOOLS:
+${JSON.stringify(toolDefinitions, null, 2)}
+
+Stay concise and helpful.`;
+    const sanitizedMessages = messages.filter((m) => m.role !== "system").map((m) => ({
+      role: m.role,
+      content: m.content || ""
+    }));
+    try {
+      const response = await generateText({
+        model: groq("llama-3.3-70b-versatile"),
+        system: this.getFullSystemPrompt(defaultSystem),
+        messages: sanitizedMessages
+      });
+      const text = response.text.trim();
+      const toolCalls = [];
+      const formalRegex = /\[TOOL_CALL:\s*(\{.*?\})\]/gi;
+      let match;
+      while ((match = formalRegex.exec(text)) !== null) {
+        try {
+          toolCalls.push(JSON.parse(match[1]));
+        } catch (e) {
+        }
+      }
+      const catchAllRegex = /(\w+)\(\s*(\{.*?\}|["'].*?["'])\s*\)/g;
+      if (toolCalls.length === 0) {
+        while ((match = catchAllRegex.exec(text)) !== null) {
+          try {
+            const name = match[1];
+            let rawArgs = match[2].trim();
+            let args = {};
+            if (rawArgs.startsWith("{")) {
+              args = JSON.parse(rawArgs);
+            } else {
+              const val = rawArgs.replace(/['"]/g, "");
+              if (name === "navigateTo") args = { url: val };
+              if (name === "highlightElement") args = { elementId: val };
+            }
+            if (this.tools.getTool(name)) {
+              toolCalls.push({ name, args });
+            }
+          } catch (e) {
+          }
+        }
+      }
+      const cleanText = text.replace(formalRegex, "").replace(catchAllRegex, "").replace(/```\w*\n?|```/g, "").trim();
+      return {
+        text: cleanText || "Action complete.",
+        toolCalls
+      };
+    } catch (e) {
+      console.error("[SynapseJS] Agent.runGroq Error:", e);
+      throw e;
+    }
   }
   /**
-   * Reusable method to parse the AI SDK response and execute local tools
+   * Translates the Synapse Tool Registry into the format expected by the AI SDK.
    */
+  getAITools() {
+    const aiTools = {};
+    for (const t of this.tools.getAllTools()) {
+      aiTools[t.name] = aiTool({
+        description: t.description,
+        parameters: t.schema || z.object({}),
+        execute: async (args) => {
+          console.log(`[SynapseJS] Tool Executing: ${t.name} | Args:`, JSON.stringify(args));
+          return "Tool executed. UI signal triggered.";
+        }
+      });
+    }
+    return aiTools;
+  }
 };
 function createAgent(config) {
   return new Agent(config);

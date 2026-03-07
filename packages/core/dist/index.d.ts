@@ -1,5 +1,5 @@
-import { T as Tool, a as AgentConfig, S as SynapseFeat, b as SynapseSignal, C as CoreMessage, c as AgentResponse } from './types-f2mb4mMM.js';
-export { A as AgentSignalHandler, F as FeatManifest, M as MessagePart, d as SYNAPSE_TOOL_NAMES, e as SynapseSignalType, f as SynapseToolName } from './types-f2mb4mMM.js';
+import { T as Tool, a as AgentConfig, S as SynapseFeat, b as SynapseSignal, C as CoreMessage, c as AgentResponse } from './types-CvL4qYPP.js';
+export { A as AgentSignalHandler, F as FeatManifest, M as MessagePart, d as SYNAPSE_TOOL_NAMES, e as SynapseSignalType, f as SynapseToolName } from './types-CvL4qYPP.js';
 import { z } from 'zod';
 
 /**
@@ -62,24 +62,19 @@ declare class Agent {
      */
     run(messages: CoreMessage[], context?: any): Promise<AgentResponse>;
     /**
-     * Translates the Axon Tool Registry into the format expected by the AI SDK.
+     * Standard execution loop for providers with robust tool calling support (OpenAI, Anthropic, Gemini, etc.)
      */
-    private getAITools;
-    /**
-     * The semantic execution loop using Google Gemini via the AI SDK.
-     */
-    private runGemini;
+    private runStandardProvider;
+    private getDefaultModel;
     /**
      * The semantic execution loop using Groq via the AI SDK.
-     */
-    /**
-     * The semantic execution loop using Groq via the AI SDK.
+     * Maintains manual parsing for maximum stability on Llama models.
      */
     private runGroq;
     /**
-     * The semantic execution loop using OpenAI via the AI SDK.
+     * Translates the Synapse Tool Registry into the format expected by the AI SDK.
      */
-    private runOpenAI;
+    private getAITools;
 }
 declare function createAgent(config: AgentConfig): Agent;
 
