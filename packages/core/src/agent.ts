@@ -1,10 +1,14 @@
 import { zodToJsonSchema } from 'zod-to-json-schema';
-import { jsonSchema, generateText, tool as aiTool } from 'ai';
+import { generateText, tool as aiTool } from 'ai';
 import { AgentConfig, AgentResponse, Tool, CoreMessage, SynapseFeat, SynapseSignal } from './types';
 import { ToolRegistry } from './tool-registry';
 import { createOpenAI } from '@ai-sdk/openai';
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { createGroq } from '@ai-sdk/groq';
+import { createAnthropic } from '@ai-sdk/anthropic';
+import { createMistral } from '@ai-sdk/mistral';
+import { createPerplexity } from '@ai-sdk/perplexity';
+import { createCohere } from '@ai-sdk/cohere';
 import { z } from 'zod';
 
 export class Agent {
@@ -329,72 +333,64 @@ export class Agent {
    * Primary method to trigger the agent's reasoning loop.
    */
   async run(messages: CoreMessage[], context?: any): Promise<AgentResponse> {
-    console.log(`[SynapseJS] AGENT v0.3.0-FEATS running with ${messages.length} messages`);
+    console.log(`[SynapseJS] AGENT running with ${messages.length} messages | Provider: ${this.config.llmProvider}`);
 
     if (!this.config.apiKey && this.config.llmProvider !== 'mock') {
-        throw new Error(`SynapseJS Error: OpenAPI/Gemini key is missing in config.`);
+        throw new Error(`SynapseJS Error: API key is missing in config for provider: ${this.config.llmProvider}`);
     }
 
-    if (this.config.llmProvider === 'openai') {
-      return this.runOpenAI(messages, context);
-    }
-
-    if (this.config.llmProvider === 'gemini') {
-      return this.runGemini(messages, context);
-    }
-
+    // Groq still uses the specialized manual parsing loop for maximum stability
     if (this.config.llmProvider === 'groq') {
-      const aiTools = this.getAITools();
-      console.log(`[SynapseJS] Starting runGroq with tools:`, Object.keys(aiTools));
       return this.runGroq(messages, context);
     }
 
-    throw new Error(`Provider ${this.config.llmProvider} is not implemented yet.`);
+    // Generic handler for providers that support standard AISDK tool calling
+    return this.runStandardProvider(messages, context);
   }
 
   /**
-   * Translates the Axon Tool Registry into the format expected by the AI SDK.
+   * Standard execution loop for providers with robust tool calling support (OpenAI, Anthropic, Gemini, etc.)
    */
-  private getAITools() {
-    const aiTools: Record<string, any> = {};
-    for (const t of this.tools.getAllTools()) {
-      aiTools[t.name] = (aiTool as any)({
-        description: t.description,
-        parameters: t.schema || z.object({}),
-        execute: async (args: any) => {
-          console.log(`[SynapseJS] Tool Executing: ${t.name} | Args:`, JSON.stringify(args));
-          // Return a simple string to the AI reasoning loop to keep it stable.
-          // The actual signal will be extracted from the tool call history.
-          return "Tool executed. UI signal triggered.";
-        }
-      });
+  private async runStandardProvider(messages: CoreMessage[], context?: any): Promise<AgentResponse> {
+    let providerFunc: any;
+
+    switch (this.config.llmProvider) {
+      case 'openai':
+        providerFunc = createOpenAI({ apiKey: this.config.apiKey });
+        break;
+      case 'gemini':
+        providerFunc = createGoogleGenerativeAI({ apiKey: this.config.apiKey });
+        break;
+      case 'anthropic':
+        providerFunc = createAnthropic({ apiKey: this.config.apiKey });
+        break;
+      case 'mistral':
+        providerFunc = createMistral({ apiKey: this.config.apiKey });
+        break;
+      case 'perplexity':
+        providerFunc = createPerplexity({ apiKey: this.config.apiKey });
+        break;
+      case 'cohere':
+        providerFunc = createCohere({ apiKey: this.config.apiKey });
+        break;
+      default:
+        providerFunc = createOpenAI({ apiKey: this.config.apiKey });
     }
-    return aiTools;
-  }
 
-  /**
-   * The semantic execution loop using Google Gemini via the AI SDK.
-   */
-  private async runGemini(messages: CoreMessage[], context?: any): Promise<AgentResponse> {
-    const google = createGoogleGenerativeAI({
-      apiKey: this.config.apiKey,
-    });
-
-    const defaultSystem = `You are Synapse Assistant, a helpful UI specialized agent.
-You help users by interacting with this documentation site.
-- Use 'highlightElement' to draw attention to features.
-- Use 'scrollTo' to move the page to specific sections.
-- Use 'navigateTo' to change routes (e.g., "/docs").
-- Stay concise, friendly, and helpful. 
-- ALWAYS respond to the user AFTER performing actions.`;
+    const defaultSystem = `You are Synapse Assistant, an intelligent UI agent.
+You help users by interacting with the page.
+- Always use the available tools to achieve the user's goal.
+- If you are asked to navigate, use 'navigateTo'.
+- If you are asked to show something, use 'highlightElement'.
+- Stay concise, friendly, and helpful.`;
 
     try {
       const response = await (generateText as any)({
-        model: google('gemini-1.5-flash'),
+        model: providerFunc(this.config.model || this.getDefaultModel()),
         system: this.getFullSystemPrompt(defaultSystem),
         messages: messages as any,
         tools: this.getAITools(),
-        maxSteps: 5,
+        maxSteps: this.config.maxSteps || 5,
       });
 
       const allToolCalls = (response.steps || []).flatMap((step: any) => 
@@ -402,21 +398,31 @@ You help users by interacting with this documentation site.
       );
 
       return { 
-        text: response.text.trim() || "Execution complete.", 
+        text: response.text.trim() || "Action complete.", 
         toolCalls: allToolCalls 
       };
     } catch (e: any) {
-       console.error("[SynapseJS] Agent.runGemini Error:", e);
-       throw e;
+      console.error(`[SynapseJS] Agent.runStandardProvider (${this.config.llmProvider}) Error:`, e);
+      throw e;
+    }
+  }
+
+  private getDefaultModel(): string {
+    switch (this.config.llmProvider) {
+      case 'openai': return 'gpt-4o-mini';
+      case 'gemini': return 'gemini-1.5-flash';
+      case 'anthropic': return 'claude-3-5-sonnet-20240620';
+      case 'mistral': return 'mistral-large-latest';
+      case 'perplexity': return 'llama-3.1-sonar-large-128k-online';
+      case 'cohere': return 'command-r-plus';
+      case 'groq': return 'llama-3.3-70b-versatile';
+      default: return 'gpt-4o-mini';
     }
   }
 
   /**
    * The semantic execution loop using Groq via the AI SDK.
-   */
-
-  /**
-   * The semantic execution loop using Groq via the AI SDK.
+   * Maintains manual parsing for maximum stability on Llama models.
    */
   private async runGroq(messages: CoreMessage[], context?: any): Promise<AgentResponse> {
     const groq = createGroq({
@@ -439,9 +445,6 @@ EXAMPLES:
 User: "Show me the features"
 Assistant: [TOOL_CALL: {"name": "highlightElement", "args": {"elementId": "features"}}] I've highlighted the features for you!
 
-User: "Go to docs"
-Assistant: [TOOL_CALL: {"name": "navigateTo", "args": {"url": "/docs"}}] Certainly! Moving to the documentation.
-
 AVAILABLE TOOLS:
 ${JSON.stringify(toolDefinitions, null, 2)}
 
@@ -462,7 +465,6 @@ Stay concise and helpful.`;
       const text = response.text.trim();
       const toolCalls: any[] = [];
 
-      // Primary strategy: [TOOL_CALL: { ... }]
       const formalRegex = /\[TOOL_CALL:\s*(\{.*?\})\]/gi;
       let match;
       while ((match = formalRegex.exec(text)) !== null) {
@@ -471,7 +473,6 @@ Stay concise and helpful.`;
         } catch (e) {}
       }
 
-      // Broad fallback for varied hallucinations (markdown, code blocks, etc)
       const catchAllRegex = /(\w+)\(\s*(\{.*?\}|["'].*?["'])\s*\)/g;
       if (toolCalls.length === 0) {
         while ((match = catchAllRegex.exec(text)) !== null) {
@@ -506,43 +507,22 @@ Stay concise and helpful.`;
   }
 
   /**
-   * The semantic execution loop using OpenAI via the AI SDK.
+   * Translates the Synapse Tool Registry into the format expected by the AI SDK.
    */
-  private async runOpenAI(messages: CoreMessage[], context?: any): Promise<AgentResponse> {
-    const openai = createOpenAI({
-      apiKey: this.config.apiKey,
-    });
-
-    const defaultSystem = `You are Axon, an intelligent UI Agent. 
-You have access to 'interactWithScreen' to control the application.
-You will be provided with a 'Current Live DOM State' in the context as a JSON list. 
-To interact with the UI, you MUST find the exact 'id' of the element in that JSON and pass it to 'interactWithScreen'.
-If you are asked about the state (like cart count), look for elements in the DOM state with descriptive text or IDs like 'cart-status'.
-If the DOM state contains 'type: 3d-scene', you can use the 'interactWith3DScene' tool to trigger its available events or variables.
-Always respond to the user after performing actions.`;
-
-    const response = await (generateText as any)({
-      model: openai(this.config.model || 'gpt-4o-mini'),
-      system: this.getFullSystemPrompt(defaultSystem),
-      messages: messages as any,
-      tools: this.getAITools(),
-      maxSteps: this.config.maxSteps || 5,
-    });
-
-    const allToolCalls = (response.steps || []).flatMap((step: any) => 
-       (step.toolCalls || []).map((tc: any) => ({ name: tc.toolName, args: tc.args }))
-    );
-
-    return { 
-      text: response.text.trim(), 
-      toolCalls: allToolCalls 
-    };
+  private getAITools() {
+    const aiTools: Record<string, any> = {};
+    for (const t of this.tools.getAllTools()) {
+      aiTools[t.name] = (aiTool as any)({
+        description: t.description,
+        parameters: t.schema || z.object({}),
+        execute: async (args: any) => {
+          console.log(`[SynapseJS] Tool Executing: ${t.name} | Args:`, JSON.stringify(args));
+          return "Tool executed. UI signal triggered.";
+        }
+      });
+    }
+    return aiTools;
   }
-
-  /**
-   * Reusable method to parse the AI SDK response and execute local tools
-   */
-
 }
 
 // Factory function
