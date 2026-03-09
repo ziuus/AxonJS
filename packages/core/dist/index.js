@@ -21,6 +21,7 @@ var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: tru
 var index_exports = {};
 __export(index_exports, {
   Agent: () => Agent,
+  CharacterFeat: () => CharacterFeat,
   SYNAPSE_TOOL_NAMES: () => SYNAPSE_TOOL_NAMES,
   ThreeDFeat: () => ThreeDFeat,
   ToolRegistry: () => ToolRegistry,
@@ -684,9 +685,62 @@ var ThreeDFeat = {
     }
   ]
 };
+
+// src/feats/character.ts
+var import_zod5 = require("zod");
+var CharacterFeat = {
+  manifest: {
+    name: "Character Persona",
+    version: "1.0.0",
+    description: "Enables high-level control over character gestures, expressions, and posture.",
+    tags: ["3d", "character", "animation", "persona"]
+  },
+  instructions: `
+    You are the physical representation of the 3D character in the scene.
+    - Use 'performGesture' to express yourself physically (e.g., 'wave' to greet, 'shrug' when unsure).
+    - Use 'setFacialExpression' to reflect your internal state or response mood.
+    - If a user asks who you are, you can point at yourself or perform a friendly gesture.
+  `,
+  tools: [
+    {
+      name: "performGesture",
+      description: "Triggers a skeletal animation gesture on the character.",
+      schema: import_zod5.z.object({
+        gesture: import_zod5.z.enum(["wave", "shrug", "nod", "shake_head", "point_up", "point_forward", "bow"]).describe("The physical gesture to perform")
+      }),
+      execute: async ({ gesture }) => ({
+        _synapseSignal: "3D_INTERACTION",
+        payload: { actionType: "emitEvent", target: gesture }
+      })
+    },
+    {
+      name: "setFacialExpression",
+      description: "Updates the character morph targets or blend shapes for expressions.",
+      schema: import_zod5.z.object({
+        expression: import_zod5.z.enum(["neutral", "happy", "thinking", "concerned", "surprised", "smiling"]).describe("The facial expression to apply")
+      }),
+      execute: async ({ expression }) => ({
+        _synapseSignal: "3D_INTERACTION",
+        payload: { actionType: "setVariable", target: "expression", value: expression }
+      })
+    },
+    {
+      name: "setPosture",
+      description: "Changes the base idle posture of the character.",
+      schema: import_zod5.z.object({
+        posture: import_zod5.z.enum(["standing", "sitting", "attentive", "relaxed"]).describe("The base posture state")
+      }),
+      execute: async ({ posture }) => ({
+        _synapseSignal: "3D_INTERACTION",
+        payload: { actionType: "setVariable", target: "posture", value: posture }
+      })
+    }
+  ]
+};
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
   Agent,
+  CharacterFeat,
   SYNAPSE_TOOL_NAMES,
   ThreeDFeat,
   ToolRegistry,

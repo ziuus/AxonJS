@@ -100,4 +100,10 @@ declare const VisionFeat: SynapseFeat;
  */
 declare const ThreeDFeat: SynapseFeat;
 
-export { Agent, AgentConfig, AgentResponse, CoreMessage, SynapseFeat, SynapseSignal, ThreeDFeat, Tool, ToolRegistry, UIInsightsFeat, VisionFeat, createAgent };
+/**
+ * Standardized feat for controlling 3D human-like characters and avatars.
+ * This feat allows the AI to embody a specific character in the scene.
+ */
+declare const CharacterFeat: SynapseFeat;
+
+export { Agent, AgentConfig, AgentResponse, CharacterFeat, CoreMessage, SynapseFeat, SynapseSignal, ThreeDFeat, Tool, ToolRegistry, UIInsightsFeat, VisionFeat, createAgent };

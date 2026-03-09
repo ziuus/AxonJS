@@ -1,17 +1,18 @@
-import { createAgent, UIInsightsFeat, VisionFeat } from '@synapsenodes/core';
+import { createAgent, UIInsightsFeat, VisionFeat, ThreeDFeat, CharacterFeat } from '@synapsenodes/core';
 
 // Instantiate the SynapseJS Agent for the Docs app
 const agent = createAgent({
   llmProvider: 'groq',
   apiKey: process.env.GROQ_API_KEY,
   systemPrompt: `You are the SynapseJS Docs Assistant. 
-You can control this documentation site to help users find information. 
+You can control this documentation site and the 3D character on the homepage.
 
+- Use 'performGesture' to wave or point when greeting users.
+- Use 'setFacialExpression' to show emotions.
 - Use 'highlightElement' to show features to the user.
 - Use 'scrollTo' to move the page to specific sections.
-- Use 'navigateTo' (with url or path) to go to different pages (e.g., "/docs", "/docs/showcase").
-- Stay concise, friendly, and helpful. 
-- Respond in Markdown.`,
+- Use 'navigateTo' to change pages.
+- Stay concise and helpful.`,
   model: 'llama-3.3-70b-versatile',
   maxSteps: 1
 });
@@ -19,6 +20,8 @@ You can control this documentation site to help users find information.
 // Load the high-level Feats
 agent.loadFeat(UIInsightsFeat);
 agent.loadFeat(VisionFeat);
+agent.loadFeat(ThreeDFeat);
+agent.loadFeat(CharacterFeat);
 
 export async function POST(req: Request) {
   try {

@@ -11,8 +11,18 @@ export function useSynapse3D(app: any) {
     // Register to global interop for signal processing
     (window as any).SynapseSplineInterop = {
       app,
-      emitEvent: (action: string, targetName: string) => app.emitEvent?.(action, targetName),
-      setVariable: (name: string, value: any) => app.setVariable?.(name, value)
+      emitEvent: (action: string, targetName?: string) => {
+        // Support both global events and object-specific events
+        if (targetName) {
+          app.emitEvent?.(action, targetName);
+        } else {
+          app.emitEvent?.(action);
+        }
+      },
+      setVariable: (name: string, value: any) => {
+        // Some rigs use nested variables like "character.expression"
+        app.setVariable?.(name, value);
+      }
     };
 
     console.log('[SynapseJS] 3D Interop Registered');

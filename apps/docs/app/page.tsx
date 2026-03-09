@@ -7,6 +7,8 @@ import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import './landing.css';
 
+import { CharacterDemo } from '../components/CharacterDemo';
+
 export default function LandingPage() {
   const landingRef = useRef<HTMLDivElement>(null);
   const domElements = useSynapseDOM();
@@ -48,11 +50,16 @@ export default function LandingPage() {
         </div>
         
         <div className="hero-content">
-          <div className="badge">v0.3.0 Now Available</div>
+          <div className="badge">v0.3.1 Character Update</div>
           <h1 className="hero-title">
             The Agentic Layer <br />
-            <span>For Modern Web Apps</span>
+            <span>For 3D Avatars</span>
           </h1>
+          
+          <div className="w-full max-w-2xl mx-auto my-12">
+             <CharacterDemo />
+          </div>
+
           <p className="hero-subtitle">
             SynapseJS bridges the gap between LLMs and your UI. 
             Enable your AI to see, feel, and control your application with zero friction.

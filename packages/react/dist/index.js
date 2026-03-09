@@ -55,8 +55,16 @@ function useSynapse3D(app) {
     if (!app || typeof window === "undefined") return;
     window.SynapseSplineInterop = {
       app,
-      emitEvent: (action, targetName) => app.emitEvent?.(action, targetName),
-      setVariable: (name, value) => app.setVariable?.(name, value)
+      emitEvent: (action, targetName) => {
+        if (targetName) {
+          app.emitEvent?.(action, targetName);
+        } else {
+          app.emitEvent?.(action);
+        }
+      },
+      setVariable: (name, value) => {
+        app.setVariable?.(name, value);
+      }
     };
     console.log("[SynapseJS] 3D Interop Registered");
     return () => {
