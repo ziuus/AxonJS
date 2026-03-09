@@ -23,7 +23,8 @@ __export(index_exports, {
   Agent: () => import_core.Agent,
   SynapseProvider: () => SynapseProvider,
   createAgent: () => import_core.createAgent,
-  useAgent: () => useAgent
+  useAgent: () => useAgent,
+  useSynapse3D: () => useSynapse3D
 });
 module.exports = __toCommonJS(index_exports);
 
@@ -47,6 +48,24 @@ function useAgent() {
   return context.agent;
 }
 
+// src/useSynapse3D.ts
+var import_react2 = require("react");
+function useSynapse3D(app) {
+  (0, import_react2.useEffect)(() => {
+    if (!app || typeof window === "undefined") return;
+    window.SynapseSplineInterop = {
+      app,
+      emitEvent: (action, targetName) => app.emitEvent?.(action, targetName),
+      setVariable: (name, value) => app.setVariable?.(name, value)
+    };
+    console.log("[SynapseJS] 3D Interop Registered");
+    return () => {
+      console.log("[SynapseJS] 3D Interop Unregistered");
+      delete window.SynapseSplineInterop;
+    };
+  }, [app]);
+}
+
 // src/index.ts
 var import_core = require("@synapsenodes/core");
 // Annotate the CommonJS export names for ESM import in node:
@@ -54,5 +73,6 @@ var import_core = require("@synapsenodes/core");
   Agent,
   SynapseProvider,
   createAgent,
-  useAgent
+  useAgent,
+  useSynapse3D
 });

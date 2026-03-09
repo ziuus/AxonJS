@@ -312,6 +312,14 @@ export class Agent {
   }
 
   /**
+   * Extends the agent with a Synapse Feat.
+   * Shortcut for this.loadFeat(feat).
+   */
+  use(feat: SynapseFeat): SynapseSignal[] {
+    return this.loadFeat(feat);
+  }
+
+  /**
    * Aggregates default instructions with all loaded feat instructions.
    */
   private getFullSystemPrompt(defaultSystem: string): string {

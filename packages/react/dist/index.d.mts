@@ -11,4 +11,10 @@ interface SynapseProviderProps {
 declare function SynapseProvider({ runtime, feats, children }: SynapseProviderProps): react_jsx_runtime.JSX.Element;
 declare function useAgent(): Agent;
 
-export { SynapseProvider, type SynapseProviderProps, useAgent };
+/**
+ * Hook to register a 3D application (e.g., Spline) for SynapseJS interoperability.
+ * @param app The 3D application instance (e.g., the Spline app object).
+ */
+declare function useSynapse3D(app: any): void;
+
+export { SynapseProvider, type SynapseProviderProps, useAgent, useSynapse3D };

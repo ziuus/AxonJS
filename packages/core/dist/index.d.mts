@@ -54,6 +54,11 @@ declare class Agent {
      */
     loadFeat(feat: SynapseFeat): SynapseSignal[];
     /**
+     * Extends the agent with a Synapse Feat.
+     * Shortcut for this.loadFeat(feat).
+     */
+    use(feat: SynapseFeat): SynapseSignal[];
+    /**
      * Aggregates default instructions with all loaded feat instructions.
      */
     private getFullSystemPrompt;
@@ -90,4 +95,9 @@ declare const UIInsightsFeat: SynapseFeat;
  */
 declare const VisionFeat: SynapseFeat;
 
-export { Agent, AgentConfig, AgentResponse, CoreMessage, SynapseFeat, SynapseSignal, Tool, ToolRegistry, UIInsightsFeat, VisionFeat, createAgent };
+/**
+ * Standardized feat for interacting with 3D scenes (Spline, Three.js, etc.)
+ */
+declare const ThreeDFeat: SynapseFeat;
+
+export { Agent, AgentConfig, AgentResponse, CoreMessage, SynapseFeat, SynapseSignal, ThreeDFeat, Tool, ToolRegistry, UIInsightsFeat, VisionFeat, createAgent };

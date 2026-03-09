@@ -18,11 +18,30 @@ function useAgent() {
   return context.agent;
 }
 
+// src/useSynapse3D.ts
+import { useEffect as useEffect2 } from "react";
+function useSynapse3D(app) {
+  useEffect2(() => {
+    if (!app || typeof window === "undefined") return;
+    window.SynapseSplineInterop = {
+      app,
+      emitEvent: (action, targetName) => app.emitEvent?.(action, targetName),
+      setVariable: (name, value) => app.setVariable?.(name, value)
+    };
+    console.log("[SynapseJS] 3D Interop Registered");
+    return () => {
+      console.log("[SynapseJS] 3D Interop Unregistered");
+      delete window.SynapseSplineInterop;
+    };
+  }, [app]);
+}
+
 // src/index.ts
 import { createAgent, Agent } from "@synapsenodes/core";
 export {
   Agent,
   SynapseProvider,
   createAgent,
-  useAgent
+  useAgent,
+  useSynapse3D
 };

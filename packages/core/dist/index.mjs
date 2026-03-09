@@ -336,6 +336,13 @@ var Agent = class {
     return feat.onLoad ? feat.onLoad() : [];
   }
   /**
+   * Extends the agent with a Synapse Feat.
+   * Shortcut for this.loadFeat(feat).
+   */
+  use(feat) {
+    return this.loadFeat(feat);
+  }
+  /**
    * Aggregates default instructions with all loaded feat instructions.
    */
   getFullSystemPrompt(defaultSystem) {
@@ -605,9 +612,50 @@ Wait for the screenshot data to be provided in the next turn before drawing conc
     }
   ]
 };
+
+// src/feats/three-d.ts
+import { z as z4 } from "zod";
+var ThreeDFeat = {
+  manifest: {
+    name: "3D Interaction",
+    version: "1.0.0",
+    description: "Enables high-level control over 3D characters and interactive scenes.",
+    tags: ["3d", "animation", "spline"]
+  },
+  instructions: `
+    Use 'trigger3DAnimation' to play named animations (e.g., 'wave', 'nod').
+    Use 'setCharacterEmotion' to set mood variables (e.g., 'happy', 'thinking').
+    Use 'pointAtElement' to look at specific UI elements via data-synapse IDs.
+  `,
+  tools: [
+    {
+      name: "trigger3DAnimation",
+      description: "Triggers a named animation sequence in the 3D scene.",
+      schema: z4.object({
+        animationName: z4.string().describe("The name of the animation to play")
+      }),
+      execute: async ({ animationName }) => ({
+        _synapseSignal: "3D_INTERACTION",
+        payload: { actionType: "emitEvent", target: animationName }
+      })
+    },
+    {
+      name: "setCharacterEmotion",
+      description: "Changes character mood or state via 3D scene variables.",
+      schema: z4.object({
+        emotion: z4.enum(["happy", "sad", "thinking", "surprised"]).describe("The mood to set")
+      }),
+      execute: async ({ emotion }) => ({
+        _synapseSignal: "3D_INTERACTION",
+        payload: { actionType: "setVariable", target: "emotion", value: emotion }
+      })
+    }
+  ]
+};
 export {
   Agent,
   SYNAPSE_TOOL_NAMES,
+  ThreeDFeat,
   ToolRegistry,
   UIInsightsFeat,
   VisionFeat,
