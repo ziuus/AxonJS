@@ -57,10 +57,9 @@ function AvatarModel({ modelUrl, animationState = 'idle', isTyping = false, spea
   useFrame((state, delta) => {
     if (mixer.current) mixer.current.update(delta);
     
+
     // Rotation logic
     if (isRotating && avatarRef.current) {
-      rotationProgress.current += delta * 4; // speed
-      avatarRef.current.rotation.y += delta * 4;
       if (rotationProgress.current >= Math.PI * 2) {
         avatarRef.current.rotation.y = 0;
         rotationProgress.current = 0;
@@ -89,6 +88,9 @@ function AvatarModel({ modelUrl, animationState = 'idle', isTyping = false, spea
             head.lookAt(state.camera.position);
           }
         }
+
+        // CONSUME SIGNAL: Clear it so it doesn't process every frame
+        scene.userData.synapseValue = null;
       }
     }
   });
@@ -221,6 +223,8 @@ export function SynapseAvatar({
     animationState, 
     isTyping, 
     speakText,
+    scale,
+    position,
     className = "relative w-full h-full min-h-[400px] rounded-2xl overflow-hidden border border-white/10 bg-black/20 backdrop-blur-md",
     showBadge = true
 }: SynapseAvatarProps & { className?: string, showBadge?: boolean }) {
@@ -261,7 +265,14 @@ export function SynapseAvatar({
           <SceneLights />
           
           <Suspense fallback={null}>
-            <AvatarModel modelUrl={modelUrl} animationState={animationState} isTyping={isTyping} speakText={speakText} />
+            <AvatarModel 
+                modelUrl={modelUrl} 
+                animationState={animationState} 
+                isTyping={isTyping} 
+                speakText={speakText} 
+                scale={scale}
+                position={position}
+            />
             <Environment preset="city" />
             <ContactShadows opacity={0.4} scale={10} blur={1} far={10} resolution={256} color="#000000" />
           </Suspense>

@@ -72,10 +72,23 @@ function useSynapse3D(app) {
         if (app.setVariable) {
           app.setVariable(name, value);
         } else if (app.isObject3D || app.isScene || app.getObjectByName) {
-          const object = app.getObjectByName(name);
+          const object = app.getObjectByName ? app.getObjectByName(name) : null;
           if (object) {
             if (typeof value === "object" && value !== null) {
-              Object.assign(object, value);
+              Object.entries(value).forEach(([key, val]) => {
+                const target = object[key];
+                if (target && typeof target.copy === "function" && typeof val === "object" && val !== null) {
+                  target.copy(val);
+                } else if (target && typeof target.set === "function") {
+                  if (Array.isArray(val)) {
+                    target.set(...val);
+                  } else {
+                    target.set(val);
+                  }
+                } else {
+                  object[key] = val;
+                }
+              });
             } else {
               object.userData.synapseValue = value;
             }
@@ -142,8 +155,6 @@ function AvatarModel({ modelUrl, animationState = "idle", isTyping = false, spea
   (0, import_fiber.useFrame)((state, delta) => {
     if (mixer.current) mixer.current.update(delta);
     if (isRotating && avatarRef.current) {
-      rotationProgress.current += delta * 4;
-      avatarRef.current.rotation.y += delta * 4;
       if (rotationProgress.current >= Math.PI * 2) {
         avatarRef.current.rotation.y = 0;
         rotationProgress.current = 0;
@@ -167,6 +178,7 @@ function AvatarModel({ modelUrl, animationState = "idle", isTyping = false, spea
             head.lookAt(state.camera.position);
           }
         }
+        scene.userData.synapseValue = null;
       }
     }
   });
@@ -283,6 +295,8 @@ function SynapseAvatar({
   animationState,
   isTyping,
   speakText,
+  scale,
+  position,
   className = "relative w-full h-full min-h-[400px] rounded-2xl overflow-hidden border border-white/10 bg-black/20 backdrop-blur-md",
   showBadge = true
 }) {
@@ -310,7 +324,17 @@ function SynapseAvatar({
     /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)(import_fiber.Canvas, { camera: { position: [0, 0, 6], fov: 45 }, children: [
       /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(SceneLights, {}),
       /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)(import_react3.Suspense, { fallback: null, children: [
-        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(AvatarModel, { modelUrl, animationState, isTyping, speakText }),
+        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
+          AvatarModel,
+          {
+            modelUrl,
+            animationState,
+            isTyping,
+            speakText,
+            scale,
+            position
+          }
+        ),
         /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(import_drei.Environment, { preset: "city" }),
         /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(import_drei.ContactShadows, { opacity: 0.4, scale: 10, blur: 1, far: 10, resolution: 256, color: "#000000" })
       ] }),

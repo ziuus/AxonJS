@@ -17,11 +17,25 @@ export function useSynapse3D(app: any) {
           app.setVariable(name, value);
         } else if (app.isObject3D || app.isScene || app.getObjectByName) {
           // Standard Three.js (Root object or Scene)
-          const object = app.getObjectByName(name);
+          const object = app.getObjectByName ? app.getObjectByName(name) : null;
           if (object) {
-            // Apply property updates
+            // Apply property updates safely
             if (typeof value === 'object' && value !== null) {
-              Object.assign(object, value);
+              Object.entries(value).forEach(([key, val]) => {
+                const target = (object as any)[key];
+                // Handle Three.js types (Vector3, Euler, Color, etc.)
+                if (target && typeof target.copy === 'function' && typeof val === 'object' && val !== null) {
+                  target.copy(val);
+                } else if (target && typeof target.set === 'function') {
+                  if (Array.isArray(val)) {
+                    target.set(...val);
+                  } else {
+                    target.set(val);
+                  }
+                } else {
+                  (object as any)[key] = val;
+                }
+              });
             } else {
               object.userData.synapseValue = value;
             }

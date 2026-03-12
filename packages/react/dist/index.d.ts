@@ -25,7 +25,7 @@ interface SynapseAvatarProps {
     scale?: number;
     position?: [number, number, number];
 }
-declare function SynapseAvatar({ modelUrl, animationState, isTyping, speakText, className, showBadge }: SynapseAvatarProps & {
+declare function SynapseAvatar({ modelUrl, animationState, isTyping, speakText, scale, position, className, showBadge }: SynapseAvatarProps & {
     className?: string;
     showBadge?: boolean;
 }): react_jsx_runtime.JSX.Element;

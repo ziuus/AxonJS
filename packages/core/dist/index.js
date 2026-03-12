@@ -694,6 +694,22 @@ var ThreeDFeat = {
         _synapseSignal: "3D_INTERACTION",
         payload: { actionType: "setVariable", target: "emotion", value: emotion }
       })
+    },
+    {
+      name: "set3DScale",
+      description: "Sets the scale of a 3D object in the scene.",
+      schema: import_zod4.z.object({
+        target: import_zod4.z.string().describe('The name of the 3D object to scale (e.g., "Head", "Robot")'),
+        scale: import_zod4.z.number().describe("The uniform scale factor (1.0 = normal)")
+      }),
+      execute: async ({ target, scale }) => ({
+        _synapseSignal: "3D_INTERACTION",
+        payload: {
+          actionType: "setVariable",
+          target,
+          value: { scale: { x: scale, y: scale, z: scale } }
+        }
+      })
     }
   ]
 };
