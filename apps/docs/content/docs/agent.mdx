@@ -3,7 +3,7 @@ title: Agent
 description: The central orchestrator that connects your LLM to your UI.
 ---
 
-The `Agent` class is the heart of SynapseJS. It wraps your chosen LLM provider and gives it access to all 20 built-in tools (plus any custom tools you register). When the user sends a message, the Agent processes it through the LLM, picks the right tools, and returns typed `SynapseSignal` objects for your frontend to handle.
+The `Agent` class is the heart of SynapseJS. It wraps your chosen LLM provider and gives it access to all 20 built-in tools (plus any custom tools you register). Using our **Feat System**, you can easily extend the Agent with complex behaviors like 3D character control (`CharacterFeat`) or advanced UI analysis.
 
 ### Constructor
 
@@ -44,4 +44,15 @@ return Response.json({
     toolCalls: result.toolCalls
   }]
 });
+```
+
+### Extending with Feats
+
+Feats are ready-to-use skill sets for your agent.
+
+```typescript
+import { Agent, CharacterFeat } from '@synapsenodes/core';
+
+const agent = new Agent({ ... });
+agent.use(CharacterFeat); // Immediately enables character gestures & control
 ```

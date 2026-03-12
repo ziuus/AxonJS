@@ -6,8 +6,12 @@ description: Add AI superpowers to your Next.js app in under 5 minutes.
 ### 1. Install
 
 ```bash
-npm install @synapsenodes/core
+npm install @synapsenodes/core @synapsenodes/react
 ```
+
+> [!TIP]
+> Using React? The `@synapsenodes/react` package simplifies integration with hooks like `useSynapseSignals` and components like `SynapseAvatar`.
+
 
 ### 2. Set environment variables
 
@@ -53,9 +57,11 @@ export async function POST(req: Request) {
 // app/page.tsx
 'use client';
 import { useState } from 'react';
-import { useSynapseDOM, useSynapseSignals } from '@synapsenodes/core/client';
+import { useSynapseSignals } from '@synapsenodes/react';
+import { useSynapseDOM } from '@synapsenodes/core/client';
 
 export default function Page() {
+
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const domElements = useSynapseDOM();

@@ -476,7 +476,7 @@ You help users by interacting with the page.
       case "openai":
         return "gpt-4o-mini";
       case "gemini":
-        return "gemini-2.5-flash";
+        return "gemini-2.0-flash";
       case "anthropic":
         return "claude-3-5-sonnet-20240620";
       case "mistral":

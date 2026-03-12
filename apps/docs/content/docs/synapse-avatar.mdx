@@ -1,0 +1,68 @@
+---
+title: Synapse Avatar
+description: A high-fidelity 3D character component for your AI assistant.
+---
+
+The `SynapseAvatar` is a React component that brings your AI to life with 3D models, animations, and integrated Text-to-Speech (TTS). It's designed to work seamlessly with the `CharacterFeat`.
+
+### Installation
+
+Ensure you have the React package and its peer dependencies:
+
+```bash
+npm install @synapsenodes/react @react-three/fiber @react-three/drei three
+```
+
+### Basic Usage
+
+```tsx
+import { SynapseAvatar } from '@synapsenodes/react';
+
+export default function Page() {
+  return (
+    <div className="w-full h-[500px]">
+      <SynapseAvatar 
+        modelUrl="/models/robot.glb"
+        animationState="idle"
+        isTyping={false}
+        speakText="Hello! I am your AI documentation assistant."
+      />
+    </div>
+  );
+}
+```
+
+### Props
+
+| Prop | Type | Description |
+| :--- | :--- | :--- |
+| `modelUrl` | `string` | URL to a GLTF/GLB model. |
+| `animationState` | `string` | The current animation to play (e.g., 'idle', 'wave', 'dance'). |
+| `isTyping` | `boolean` | If true, plays subtle typing-wait gestures. |
+| `speakText` | `string` | Text to speak using the browser's TTS engine. |
+| `className` | `string` | CSS classes for the container. |
+| `showBadge` | `boolean` | Whether to show the "GLTF RUNTIME" badge. |
+
+### Character Integration
+
+Use the `CharacterFeat` in your API route to allow the LLM to control the avatar:
+
+```typescript
+// app/api/chat/route.ts
+import { Agent, CharacterFeat } from '@synapsenodes/core';
+
+const agent = new Agent({ ... });
+agent.use(CharacterFeat);
+```
+
+Then pass the signal to the avatar on the frontend:
+
+```tsx
+const { processSignals } = useSynapseSignals({
+  '3D_INTERACTION': (payload) => {
+    if (payload.actionType === 'emitEvent') {
+      setAnimation(payload.target);
+    }
+  }
+});
+```

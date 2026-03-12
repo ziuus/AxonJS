@@ -430,7 +430,7 @@ You help users by interacting with the page.
   private getDefaultModel(): string {
     switch (this.config.llmProvider) {
       case 'openai': return 'gpt-4o-mini';
-      case 'gemini': return 'gemini-2.5-flash';
+      case 'gemini': return 'gemini-2.0-flash';
       case 'anthropic': return 'claude-3-5-sonnet-20240620';
       case 'mistral': return 'mistral-large-latest';
       case 'perplexity': return 'llama-3.1-sonar-large-128k-online';

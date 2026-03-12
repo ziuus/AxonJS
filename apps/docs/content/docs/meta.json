@@ -10,6 +10,7 @@
     "---React Hooks---",
     "use-synapse-dom",
     "use-synapse-signals",
+    "synapse-avatar",
     "---Built-in Tools---",
     "tools"
   ]
