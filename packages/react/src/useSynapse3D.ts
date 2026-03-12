@@ -8,27 +8,48 @@ export function useSynapse3D(app: any) {
   useEffect(() => {
     if (!app || typeof window === 'undefined') return;
 
-    // Register to global interop for signal processing
-    (window as any).SynapseSplineInterop = {
+    // Detect engine and register bridge
+    const bridge = {
       app,
-      emitEvent: (action: string, targetName?: string) => {
-        // Support both global events and object-specific events
-        if (targetName) {
-          app.emitEvent?.(action, targetName);
-        } else {
-          app.emitEvent?.(action);
+      setVariable: (name: string, value: any) => {
+        if (app.setVariable) {
+          // Spline engine
+          app.setVariable(name, value);
+        } else if (app.isObject3D || app.isScene || app.getObjectByName) {
+          // Standard Three.js (Root object or Scene)
+          const object = app.getObjectByName(name);
+          if (object) {
+            // Apply property updates
+            if (typeof value === 'object' && value !== null) {
+              Object.assign(object, value);
+            } else {
+              object.userData.synapseValue = value;
+            }
+          }
         }
       },
-      setVariable: (name: string, value: any) => {
-        // Some rigs use nested variables like "character.expression"
-        app.setVariable?.(name, value);
-      }
+      emitEvent: (type: string, name?: string) => {
+        if (app.emitEvent) {
+          // Spline events
+          if (name) {
+            app.emitEvent(type, name);
+          } else {
+            app.emitEvent(type);
+          }
+        }
+      },
     };
 
-    console.log('[SynapseJS] 3D Interop Registered');
+    // Register to global interop for signal processing
+    (window as any).Synapse3D = bridge;
+    // Fallback for legacy (if any)
+    (window as any).SynapseSplineInterop = bridge;
+
+    console.log('[SynapseJS] 3D Interop Registered (Multi-Engine)');
 
     return () => {
       console.log('[SynapseJS] 3D Interop Unregistered');
+      delete (window as any).Synapse3D;
       delete (window as any).SynapseSplineInterop;
     };
   }, [app]);

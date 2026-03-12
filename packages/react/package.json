@@ -17,7 +17,10 @@
   },
   "peerDependencies": {
     "react": ">=18.0.0",
-    "react-dom": ">=18.0.0"
+    "react-dom": ">=18.0.0",
+    "@react-three/drei": "*",
+    "@react-three/fiber": "*",
+    "three": "*"
   },
   "devDependencies": {
     "tsup": "^8.0.2",

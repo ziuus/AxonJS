@@ -90,7 +90,8 @@ var TOOL_NAME_TO_SIGNAL = {
   downloadFile: "DOWNLOAD_FILE",
   submitForm: "SUBMIT_FORM",
   checkboxToggle: "CHECKBOX_TOGGLE",
-  setTheme: "SET_THEME"
+  setTheme: "SET_THEME",
+  executeAction: "EXECUTE_ACTION"
 };
 export {
   useSynapseDOM,

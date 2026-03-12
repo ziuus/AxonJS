@@ -1,5 +1,5 @@
-import { T as Tool, a as AgentConfig, S as SynapseFeat, b as SynapseSignal, C as CoreMessage, c as AgentResponse } from './types-CvL4qYPP.js';
-export { A as AgentSignalHandler, F as FeatManifest, M as MessagePart, d as SYNAPSE_TOOL_NAMES, e as SynapseSignalType, f as SynapseToolName } from './types-CvL4qYPP.js';
+import { T as Tool, a as AgentConfig, S as SynapseFeat, b as SynapseSignal, C as CoreMessage, c as AgentResponse } from './types-LEi5PNk5.js';
+export { A as AgentSignalHandler, F as FeatManifest, M as MessagePart, d as SYNAPSE_TOOL_NAMES, e as SynapseSignalType, f as SynapseToolName } from './types-LEi5PNk5.js';
 import { z } from 'zod';
 
 /**
@@ -106,4 +106,24 @@ declare const ThreeDFeat: SynapseFeat;
  */
 declare const CharacterFeat: SynapseFeat;
 
-export { Agent, AgentConfig, AgentResponse, CharacterFeat, CoreMessage, SynapseFeat, SynapseSignal, ThreeDFeat, Tool, ToolRegistry, UIInsightsFeat, VisionFeat, createAgent };
+interface ActionDefinition {
+    id: string;
+    description: string;
+    schema?: z.ZodTypeAny;
+}
+interface ActionFeatConfig {
+    /**
+     * List of actions exposed to the LLM.
+     * The actual execution logic is handled by the React client.
+     */
+    actions: ActionDefinition[];
+}
+/**
+ * ActionFeat - Agentic Co-Browsing
+ * Exposes a generic `executeAction` tool to the LLM.
+ * The LLM can call this tool with a specific `actionId` and arguments,
+ * which emits an EXECUTE_ACTION signal for the frontend to handle.
+ */
+declare function ActionFeat(config: ActionFeatConfig): SynapseFeat;
+
+export { type ActionDefinition, ActionFeat, type ActionFeatConfig, Agent, AgentConfig, AgentResponse, CharacterFeat, CoreMessage, SynapseFeat, SynapseSignal, ThreeDFeat, Tool, ToolRegistry, UIInsightsFeat, VisionFeat, createAgent };

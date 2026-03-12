@@ -1,143 +1,359 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
-import { useSynapseDOM } from '@synapsenodes/core/client';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import './landing.css';
-
-import { CharacterDemo } from '../components/CharacterDemo';
+import { SynapseAvatar } from '@synapsenodes/react';
 
 export default function LandingPage() {
-  const landingRef = useRef<HTMLDivElement>(null);
-  const domElements = useSynapseDOM();
-
+  const heroBadgeRef = useRef(null);
+  const heroTitleRef = useRef(null);
+  const heroDescRef = useRef(null);
+  const heroActionsRef = useRef(null);
+  const heroCodeRef = useRef(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  
   useEffect(() => {
     gsap.registerPlugin(ScrollTrigger);
-    
-    // Hero Animation
-    gsap.from('.hero-content > *', {
-      y: 100,
-      opacity: 0,
-      duration: 1,
-      stagger: 0.2,
-      ease: 'power4.out',
+
+    // Entrance animations
+    const tl = gsap.timeline({ defaults: { ease: 'power4.out' } });
+    tl.to(heroBadgeRef.current, { opacity: 1, y: 0, duration: 0.8 }, 0.2)
+      .to(heroTitleRef.current, { opacity: 1, y: 0, duration: 1.0 }, 0.4)
+      .to(heroDescRef.current, { opacity: 1, y: 0, duration: 0.9 }, 0.6)
+      .to(heroActionsRef.current, { opacity: 1, y: 0, duration: 0.8 }, 0.8)
+      .to(heroCodeRef.current, { opacity: 1, y: 0, duration: 1.2 }, 0.9);
+
+    // Scroll reveal for cards and sections
+    gsap.utils.toArray('.reveal').forEach((el: any) => {
+      gsap.to(el, {
+        scrollTrigger: {
+          trigger: el,
+          start: 'top 88%',
+          toggleActions: 'play none none reverse',
+        },
+        opacity: 1,
+        y: 0,
+        duration: 1,
+        ease: 'power3.out',
+      });
     });
 
-    // Feature Cards Animation
-    gsap.from('.feature-card', {
-      scrollTrigger: {
-        trigger: '.features-grid',
-        start: 'top 80%',
-      },
-      y: 60,
-      opacity: 0,
-      duration: 0.8,
-      stagger: 0.1,
-      ease: 'back.out(1.7)',
+    gsap.utils.toArray('.card').forEach((card: any, i: number) => {
+      gsap.to(card, {
+        scrollTrigger: {
+          trigger: card,
+          start: 'top 90%',
+          toggleActions: 'play none none reverse',
+        },
+        opacity: 1,
+        y: 0,
+        duration: 0.8,
+        delay: i * 0.08,
+        ease: 'power3.out',
+      });
+    });
+
+    // 3D Parallax on hero code
+    const handleMouseMove = (e: MouseEvent) => {
+      const cx = window.innerWidth / 2;
+      const cy = window.innerHeight / 2;
+      const rx = ((e.clientY - cy) / cy) * -8;
+      const ry = ((e.clientX - cx) / cx) * 8;
+      
+      if (heroCodeRef.current) {
+        gsap.to(heroCodeRef.current, {
+          rotateX: 14 + rx,
+          rotateY: ry,
+          duration: 2,
+          ease: 'power2.out',
+        });
+      }
+    };
+    window.addEventListener('mousemove', handleMouseMove);
+
+    // Particle Background
+    const canvas = canvasRef.current;
+    if (canvas) {
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        let particles: any[] = [];
+        const COUNT = window.innerWidth < 600 ? 30 : 70;
+
+        const resize = () => {
+          canvas.width = window.innerWidth;
+          canvas.height = window.innerHeight;
+        };
+        window.addEventListener('resize', resize);
+        resize();
+
+        class Particle {
+          x=0; y=0; r=0; dx=0; dy=0; alpha=0; life=0; decay=0;
+          constructor() { this.reset(true); }
+          reset(randomY = false) {
+            this.x = Math.random() * canvas!.width;
+            this.y = randomY ? Math.random() * canvas!.height : canvas!.height + 10;
+            this.r = Math.random() * 2 + 0.5;
+            this.dx = (Math.random() - 0.5) * 0.4;
+            this.dy = -(Math.random() * 0.5 + 0.2);
+            this.alpha = Math.random() * 0.5 + 0.1;
+            this.life = 1;
+            this.decay = Math.random() * 0.002 + 0.001;
+          }
+          update() {
+            this.x += this.dx;
+            this.y += this.dy;
+            this.life -= this.decay;
+            if (this.life <= 0 || this.y < -10) this.reset();
+          }
+          draw() {
+            const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+            const col = isLight ? `rgba(234,88,12,${this.alpha * this.life})` : `rgba(249,115,22,${this.alpha * this.life})`;
+            ctx!.shadowBlur = 6;
+            ctx!.shadowColor = col;
+            ctx!.fillStyle = col;
+            ctx!.beginPath();
+            ctx!.arc(this.x, this.y, this.r, 0, Math.PI * 2);
+            ctx!.fill();
+            ctx!.shadowBlur = 0;
+          }
+        }
+
+        for (let i = 0; i < COUNT; i++) particles.push(new Particle());
+
+        let animationFrame: number;
+        const loop = () => {
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          particles.forEach(p => { p.update(); p.draw(); });
+          animationFrame = requestAnimationFrame(loop);
+        };
+        loop();
+        return () => {
+          window.removeEventListener('mousemove', handleMouseMove);
+          window.removeEventListener('resize', resize);
+          cancelAnimationFrame(animationFrame);
+        };
+      }
+    }
+  }, []);
+
+  // Magnetic Button Logic
+  useEffect(() => {
+    const magnetics = document.querySelectorAll('.magnetic');
+    magnetics.forEach((el: any) => {
+      const handleMouseMove = (e: any) => {
+        const { left, top, width, height } = el.getBoundingClientRect();
+        const x = (e.clientX - left - width / 2) * 0.45;
+        const y = (e.clientY - top - height / 2) * 0.45;
+        gsap.to(el, { x, y, duration: 0.9, ease: 'power3.out', overwrite: 'auto' });
+      };
+      const handleMouseLeave = () => {
+        gsap.to(el, { x: 0, y: 0, duration: 1.5, ease: 'elastic.out(1, 0.3)' });
+      };
+      el.addEventListener('mousemove', handleMouseMove);
+      el.addEventListener('mouseleave', handleMouseLeave);
+      return () => {
+        el.removeEventListener('mousemove', handleMouseMove);
+        el.removeEventListener('mouseleave', handleMouseLeave);
+      };
     });
   }, []);
 
   return (
-    <div ref={landingRef} className="landing-container">
-      {/* Hero Section */}
-      <section className="hero-section">
-        <div className="hero-bg">
-          <div className="gradient-blob blob-1"></div>
-          <div className="gradient-blob blob-2"></div>
-          <div className="gradient-blob blob-3"></div>
+    <div className="landing-body">
+      <canvas ref={canvasRef} id="particle-canvas" />
+
+      {/* Navigation */}
+      <nav tabIndex={-1} className="navbar" id="navbar">
+        <Link href="/" className="logo magnetic">
+          <div className="logo-mark">⚡</div>
+          <span>Synapse<strong>JS</strong></span>
+        </Link>
+        <div className="nav-center">
+          <Link href="/docs" className="nav-link">Docs</Link>
+          <Link href="/docs/showcase" className="nav-link">Showcase</Link>
+          <a href="https://github.com/ziuus/SynapseJS" target="_blank" className="nav-link">GitHub</a>
+          <Link href="/docs/changelog" className="nav-link">Changelog</Link>
         </div>
-        
-        <div className="hero-content">
-          <div className="badge">v0.3.1 Character Update</div>
-          <h1 className="hero-title">
-            The Agentic Layer <br />
-            <span>For 3D Avatars</span>
+        <div className="nav-end">
+          <Link href="/docs" className="btn btn-primary magnetic">Get Started →</Link>
+        </div>
+      </nav>
+
+      <main>
+        {/* HERO */}
+        <section className="hero">
+          <div ref={heroBadgeRef} className="hero-badge" id="hero-badge">
+            <span className="badge-dot" />
+            v0.3.0 — Feats & Vision Now Available
+          </div>
+
+          <h1 ref={heroTitleRef} className="hero-title" id="hero-title">
+            The AI Runtime<br />
+            <span className="text-gradient">Layer for Your UI</span>
           </h1>
-          
-          <div className="w-full max-w-2xl mx-auto my-12">
-             <CharacterDemo />
-          </div>
 
-          <p className="hero-subtitle">
-            SynapseJS bridges the gap between LLMs and your UI. 
-            Enable your AI to see, feel, and control your application with zero friction.
+          <p ref={heroDescRef} className="hero-desc" id="hero-desc">
+            Connect any AI agent directly to your web application.<br />
+            20+ built-in tools. Zero config. Instant superpowers.
           </p>
-          <div className="hero-cta">
-            <Link href="/docs" className="btn btn-primary">Get Started</Link>
-            <Link href="https://github.com/ziuus/SynapseJS" className="btn btn-secondary">View GitHub</Link>
-          </div>
-        </div>
-      </section>
 
-      {/* Features Grid */}
-      <section id="features" className="features-section">
-        <div className="section-header">
-          <h2 className="section-title">Core Capabilities</h2>
-          <p className="section-desc">Everything you need to build next-generation AI-powered interfaces.</p>
-        </div>
-
-        <div className="features-grid">
-          <div id="feature-dom" className="feature-card">
-            <div className="feature-icon">👁️</div>
-            <h3>DOM Awareness</h3>
-            <p>Automatic real-time mapping of your interface state into semantic JSON for LLM consumption.</p>
+          <div ref={heroActionsRef} className="hero-actions" id="hero-actions">
+            <Link href="/docs" className="btn btn-primary magnetic">
+              Start in 5 Minutes
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M5 12h14M12 5l7 7-7 7" /></svg>
+            </Link>
+            <a href="https://github.com/ziuus/SynapseJS" target="_blank" className="btn btn-ghost magnetic">
+              View on GitHub
+            </a>
           </div>
 
-          <div id="feature-control" className="feature-card">
-            <div className="feature-icon">⚡</div>
-            <h3>Direct Control</h3>
-            <p>Safe, intent-based UI manipulation via high-level signals and atomic interactions.</p>
+          {/* Character Demo */}
+          <div ref={heroCodeRef} className="hero-code-wrapper" id="hero-code" style={{ padding: 0, overflow: 'hidden', background: 'transparent' }}>
+             <SynapseAvatar 
+               modelUrl="https://cdn.jsdelivr.net/gh/mrdoob/three.js@master/examples/models/gltf/RobotExpressive/RobotExpressive.glb" 
+               animationState="idle" 
+               isTyping={false} 
+             />
           </div>
+        </section>
 
-          <div id="feature-multi" className="feature-card">
-            <div className="feature-icon">🧠</div>
-            <h3>Multi-Provider</h3>
-            <p>Native support for OpenAI, Gemini, Anthropic, and Groq with ultra-stable tool parsing.</p>
+        {/* STATS BAR */}
+        <section className="stats-bar reveal">
+          <div className="stats-grid">
+            <div className="stat-item">
+              <span className="stat-num">20+</span>
+              <span className="stat-label">Built-in Tools</span>
+            </div>
+            <div className="stat-divider" />
+            <div className="stat-item">
+              <span className="stat-num">3</span>
+              <span className="stat-label">AI Providers</span>
+            </div>
+            <div className="stat-divider" />
+            <div className="stat-item">
+              <span className="stat-num">&lt; 5min</span>
+              <span className="stat-label">Setup Time</span>
+            </div>
+            <div className="stat-divider" />
+            <div className="stat-item">
+              <span className="stat-num">0</span>
+              <span className="stat-label">Config Files</span>
+            </div>
           </div>
+        </section>
 
-          <div id="feature-3d" className="feature-card">
-            <div className="feature-icon">🎮</div>
-            <h3>3D Integration</h3>
-            <p>First-class control for Spline and Three.js scenes. Let your agent drive the 3D world.</p>
-          </div>
-        </div>
-      </section>
+        {/* FEATURES */}
+        <section className="section" id="features">
+          <div className="section-inner">
+            <div className="section-header reveal">
+              <div className="section-tag">Why SynapseJS</div>
+              <h2>Everything your AI agent needs<br /><span className="text-gradient">to understand your UI</span></h2>
+              <p className="section-sub">A complete toolkit for building AI-native user experiences — from Vision to fine-grained DOM control.</p>
+            </div>
 
-      {/* Code Snippet Section */}
-      <section className="code-section">
-        <div className="code-container">
-          <div className="code-header">
-            <div className="dots"><span></span><span></span><span></span></div>
-            <div className="file-name">SynapseProvider.tsx</div>
+            <div className="features-grid">
+              <div className="card card-lg" id="feat-vision">
+                <div className="card-icon">👁️</div>
+                <h3>Vision Support</h3>
+                <p>Your agent can literally <em>see</em> the current state of the page via screenshot analysis — understanding dynamic UI without manual selectors.</p>
+                <div className="card-tag">NEW in v0.3.0</div>
+              </div>
+              <div className="card">
+                <div className="card-icon">⚡</div>
+                <h3>20+ DOM Tools</h3>
+                <p>Scroll, click, fill forms, highlight elements, show toasts — all pre-built and ready for your agent to call.</p>
+              </div>
+              <div className="card">
+                <div className="card-icon">🔌</div>
+                <h3>Multi-Provider</h3>
+                <p>Works with Gemini, GPT-4, Groq, and any Vercel AI SDK compatible model. Swap with one line of code.</p>
+              </div>
+              <div className="card">
+                <div className="card-icon">🧩</div>
+                <h3>React Native</h3>
+                <p>First-class React hooks (<code>&lt;SynapseProvider&gt;</code>, <code>useAgent()</code>) for seamless integration into any component tree.</p>
+              </div>
+              <div className="card">
+                <div className="card-icon">🏎️</div>
+                <h3>Feats System</h3>
+                <p>Chain multiple tools into reusable automation "feats" that execute complex multi-step workflows from a single agent command.</p>
+              </div>
+              <div className="card">
+                <div className="card-icon">🔒</div>
+                <h3>Type-Safe</h3>
+                <p>Built on <strong>Zod</strong> for full end-to-end type safety. Define your tool schemas and get auto-complete in your IDE.</p>
+              </div>
+            </div>
           </div>
-          <pre className="code-body">
-            <code>{`// Initialize Synapse across your app
-<SynapseProvider 
-  config={{ 
-    llmProvider: 'anthropic',
-    model: 'claude-3-5-sonnet'
-  }}
->
-  <YourApp />
-</SynapseProvider>`}</code>
-          </pre>
-        </div>
-      </section>
+        </section>
+
+        {/* HOW IT WORKS */}
+        <section className="section section-alt" id="how-it-works">
+          <div className="section-inner">
+            <div className="section-header reveal">
+              <div className="section-tag">How It Works</div>
+              <h2>From setup to AI-powered<br /><span className="text-gradient">UI in three steps</span></h2>
+            </div>
+
+            <div className="flex flex-col md:flex-row gap-8 justify-between">
+              <div className="step-item reveal flex-1">
+                <div className="step-num">01</div>
+                <h3>Install & Configure</h3>
+                <p>Add <code>@synapsejs/core</code> and wrap your app with <code>&lt;SynapseProvider&gt;</code>. Point it at your preferred AI model.</p>
+              </div>
+              <div className="step-item reveal flex-1">
+                <div className="step-num">02</div>
+                <h3>Drop In Your Tools</h3>
+                <p>Select from 20+ pre-built tools or define custom ones using the Zod schema builder. No boilerplate.</p>
+              </div>
+              <div className="step-item reveal flex-1">
+                <div className="step-num">03</div>
+                <h3>Agent Goes to Work</h3>
+                <p>Call <code>agent.run(prompt)</code> and watch your AI navigate, fill, and control your UI in real time.</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* CTA */}
+        <section className="section cta-section reveal">
+          <div className="cta-card">
+            <h2>Ready to build AI-native<br /><span className="text-gradient">web experiences?</span></h2>
+            <p>Join developers building the next generation of intelligent UI. SynapseJS is open source and free forever.</p>
+            <div className="cta-actions">
+              <Link href="/docs" className="btn btn-primary magnetic">Read the Docs →</Link>
+              <a href="https://github.com/ziuus/SynapseJS" target="_blank" className="btn btn-ghost magnetic">⭐ Star on GitHub</a>
+            </div>
+          </div>
+        </section>
+      </main>
 
       {/* Footer */}
-      <footer className="landing-footer">
-        <div className="footer-content">
-          <div className="footer-logo">SynapseJS</div>
-          <div className="footer-links">
-            <Link href="/docs">Documentation</Link>
-            <Link href="/docs/guide/agent">Agent API</Link>
-            <Link href="https://github.com/ziuus/SynapseJS">GitHub</Link>
+      <footer className="footer">
+        <div className="footer-inner">
+          <div className="logo">
+            <div className="logo-mark">⚡</div>
+            <span>Synapse<strong>JS</strong></span>
           </div>
-          <div className="footer-copy">© 2026 Axon Foundation. Glassmorphism Design.</div>
+          <p className="footer-copy">© 2026 SynapseJS. Open Source, MIT Licensed.</p>
+          <div className="footer-links">
+            <a href="https://github.com/ziuus/SynapseJS" target="_blank">GitHub</a>
+            <Link href="/docs">Docs</Link>
+            <Link href="/docs/showcase">Showcase</Link>
+          </div>
         </div>
       </footer>
+
+      <style jsx global>{`
+        .synapse-highlight-active {
+          border-color: var(--accent) !important;
+          box-shadow: 0 0 20px var(--accent-glow) !important;
+          transform: scale(1.02);
+        }
+      `}</style>
     </div>
   );
 }

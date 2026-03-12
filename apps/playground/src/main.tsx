@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.tsx'
 import { SynapseProvider, createAgent } from '@synapsenodes/react';
+import { ActionFeat } from '@synapsenodes/core';
 import { z } from 'zod';
 
 const runtime = createAgent({
@@ -11,15 +12,22 @@ const runtime = createAgent({
   memory: 'session'
 });
 
+runtime.loadFeat(ActionFeat({
+  actions: [
+    { id: 'changeTheme', description: 'Changes the UI theme to dark or light mode. Args: { theme: string }' },
+    { id: 'popConfetti', description: 'Fires a confetti explosion on the screen.' }
+  ]
+}));
+
 runtime.registerTool({
   name: 'navigateToPage',
   description: 'Navigates the user to a different page in the application. Use this whenever the user asks to see a different part of the app.',
   schema: z.object({
-    url: z.string().describe("The path to navigate to, e.g. /dashboard or /settings")
+    path: z.string().describe("The path to navigate to, e.g. /dashboard or /settings")
   }) as z.ZodTypeAny,
-  execute: ({ url }: { url: string }) => {
-    console.log(`[App Execution] Navigating window to: ${url}`);
-    return `Successfully navigated to ${url}`;
+  execute: ({ path }: { path: string }) => {
+    console.log(`[App Execution] Navigating window to: ${path}`);
+    return `Successfully navigated to ${path}`;
   },
 });
 

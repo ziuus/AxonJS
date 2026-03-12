@@ -61,7 +61,8 @@ export type SynapseSignalType =
   | 'SUBMIT_FORM'
   | 'CHECKBOX_TOGGLE'
   | 'SET_THEME'
-  | 'CAPTURE_SCREENSHOT';
+  | 'CAPTURE_SCREENSHOT'
+  | 'EXECUTE_ACTION';
 
 /** The base shape of every signal returned by a built-in Axon tool */
 export interface SynapseSignal<T = unknown> {
@@ -89,11 +90,11 @@ export const SYNAPSE_TOOL_NAMES = [
   'waitForElement',
   'getPageUrl',
   'setPageTitle',
-  'openModal',
   'downloadFile',
   'submitForm',
   'checkboxToggle',
   'setTheme',
+  'executeAction',
 ] as const;
 
 export type SynapseToolName = typeof SYNAPSE_TOOL_NAMES[number];

@@ -20,6 +20,7 @@ var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: tru
 // src/index.ts
 var index_exports = {};
 __export(index_exports, {
+  ActionFeat: () => ActionFeat,
   Agent: () => Agent,
   CharacterFeat: () => CharacterFeat,
   SYNAPSE_TOOL_NAMES: () => SYNAPSE_TOOL_NAMES,
@@ -48,11 +49,11 @@ var SYNAPSE_TOOL_NAMES = [
   "waitForElement",
   "getPageUrl",
   "setPageTitle",
-  "openModal",
   "downloadFile",
   "submitForm",
   "checkboxToggle",
-  "setTheme"
+  "setTheme",
+  "executeAction"
 ];
 
 // src/agent.ts
@@ -447,9 +448,20 @@ You help users by interacting with the page.
         tools: this.getAITools(),
         maxSteps: this.config.maxSteps || 5
       });
-      const allToolCalls = (response.steps || []).flatMap(
-        (step) => (step.toolCalls || []).map((tc) => ({ name: tc.toolName, args: tc.args }))
-      );
+      let allToolCalls = [];
+      if (response.toolCalls && response.toolCalls.length > 0) {
+        allToolCalls = response.toolCalls.map((tc) => ({
+          name: tc.toolName || tc.name,
+          args: tc.args || tc.input || tc.parameters || tc
+        }));
+      } else {
+        allToolCalls = (response.steps || []).flatMap(
+          (step) => (step.toolCalls || []).map((tc) => ({
+            name: tc.toolName || tc.name,
+            args: tc.args || tc.input || tc.parameters || tc
+          }))
+        );
+      }
       return {
         text: response.text.trim() || "Action complete.",
         toolCalls: allToolCalls
@@ -464,7 +476,7 @@ You help users by interacting with the page.
       case "openai":
         return "gpt-4o-mini";
       case "gemini":
-        return "gemini-1.5-flash";
+        return "gemini-2.5-flash";
       case "anthropic":
         return "claude-3-5-sonnet-20240620";
       case "mistral":
@@ -697,16 +709,16 @@ var CharacterFeat = {
   },
   instructions: `
     You are the physical representation of the 3D character in the scene.
-    - Use 'performGesture' to express yourself physically (e.g., 'wave' to greet, 'shrug' when unsure).
-    - Use 'setFacialExpression' to reflect your internal state or response mood.
-    - If a user asks who you are, you can point at yourself or perform a friendly gesture.
+    - Use 'performGesture' to express yourself physically or change your state.
+    - Valid states include: idle, talking, thinking, success, failure, wave, nod, shakehead, rotate, spin, walk, dance.
+    - If a user asks who you are, you can point at yourself or perform a friendly gesture like wave.
   `,
   tools: [
     {
       name: "performGesture",
-      description: "Triggers a skeletal animation gesture on the character.",
+      description: "Triggers an animation state or gesture on the character.",
       schema: import_zod5.z.object({
-        gesture: import_zod5.z.enum(["wave", "shrug", "nod", "shake_head", "point_up", "point_forward", "bow"]).describe("The physical gesture to perform")
+        gesture: import_zod5.z.enum(["idle", "talking", "thinking", "success", "failure", "wave", "nod", "shakehead", "rotate", "spin", "walk", "dance", "agree", "disagree"]).describe("The physical gesture or state to perform")
       }),
       execute: async ({ gesture }) => ({
         _synapseSignal: "3D_INTERACTION",
@@ -734,11 +746,58 @@ var CharacterFeat = {
         _synapseSignal: "3D_INTERACTION",
         payload: { actionType: "setVariable", target: "posture", value: posture }
       })
+    },
+    {
+      name: "lookAt",
+      description: "Points the character head or eyes towards a target position or object.",
+      schema: import_zod5.z.object({
+        target: import_zod5.z.string().describe('The name of the object to look at, or "user"'),
+        intensity: import_zod5.z.number().min(0).max(1).optional().describe("How much the character should turn (0-1)")
+      }),
+      execute: async ({ target, intensity = 1 }) => ({
+        _synapseSignal: "3D_INTERACTION",
+        payload: { actionType: "setVariable", target: "lookAtTarget", value: { target, intensity } }
+      })
     }
   ]
 };
+
+// src/feats/action.ts
+var import_zod6 = require("zod");
+function ActionFeat(config) {
+  const actionEnums = config.actions.map((a) => a.id);
+  const executeActionTool = {
+    name: "executeAction",
+    description: "Execute a pre-registered frontend action by ID. Look at the system instructions for available actions and their required arguments.",
+    schema: import_zod6.z.object({
+      actionId: import_zod6.z.enum(actionEnums).describe("The ID of the action to execute"),
+      args: import_zod6.z.record(import_zod6.z.any()).optional().describe("JSON object containing the arguments for the action")
+    }),
+    execute: async ({ actionId, args }) => {
+      return {
+        _synapseSignal: "EXECUTE_ACTION",
+        payload: { actionId, args }
+      };
+    }
+  };
+  const actionDescriptions = config.actions.map(
+    (a) => `- **${a.id}**: ${a.description}`
+  ).join("\n");
+  return {
+    manifest: {
+      name: "ActionFeat",
+      version: "1.0.0",
+      description: "Agentic Co-browsing tool registry for custom frontend functions"
+    },
+    tools: [executeActionTool],
+    instructions: `You have access to the following custom frontend actions via the 'executeAction' tool:
+${actionDescriptions}
+To trigger one of these, use executeAction({ actionId: "...", args: {...} }).`
+  };
+}
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
+  ActionFeat,
   Agent,
   CharacterFeat,
   SYNAPSE_TOOL_NAMES,

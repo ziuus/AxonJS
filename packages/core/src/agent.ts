@@ -401,9 +401,21 @@ You help users by interacting with the page.
         maxSteps: this.config.maxSteps || 5,
       });
 
-      const allToolCalls = (response.steps || []).flatMap((step: any) => 
-         (step.toolCalls || []).map((tc: any) => ({ name: tc.toolName, args: tc.args }))
-      );
+      // Prefer top-level toolCalls, fallback to steps
+      let allToolCalls: any[] = [];
+      if (response.toolCalls && response.toolCalls.length > 0) {
+        allToolCalls = response.toolCalls.map((tc: any) => ({ 
+          name: tc.toolName || tc.name, 
+          args: tc.args || tc.input || tc.parameters || tc 
+        }));
+      } else {
+        allToolCalls = (response.steps || []).flatMap((step: any) => 
+           (step.toolCalls || []).map((tc: any) => ({ 
+             name: tc.toolName || tc.name, 
+             args: tc.args || tc.input || tc.parameters || tc 
+           }))
+        );
+      }
 
       return { 
         text: response.text.trim() || "Action complete.", 
@@ -418,7 +430,7 @@ You help users by interacting with the page.
   private getDefaultModel(): string {
     switch (this.config.llmProvider) {
       case 'openai': return 'gpt-4o-mini';
-      case 'gemini': return 'gemini-1.5-flash';
+      case 'gemini': return 'gemini-2.5-flash';
       case 'anthropic': return 'claude-3-5-sonnet-20240620';
       case 'mistral': return 'mistral-large-latest';
       case 'perplexity': return 'llama-3.1-sonar-large-128k-online';

@@ -82,7 +82,31 @@ export function FloatingAssistant() {
   useEffect(() => {
     const lastMsg = messages[messages.length - 1];
     if (lastMsg && lastMsg.role === 'assistant' && (lastMsg as any).toolCalls) {
-        processSignals((lastMsg as any).toolCalls);
+        const tcs = (lastMsg as any).toolCalls;
+        
+        // Pass to standard hook handler (needs .name mapping)
+        processSignals(tcs);
+        
+        // Explicitly handle raw 3D_INTERACTION signals
+        tcs.forEach((tc: any) => {
+            console.log('[FloatingAssistant] Processing tool call:', tc);
+            if (tc._synapseSignal === '3D_INTERACTION' || tc.name === 'triggerContextualAnimation' || tc.name === 'performGesture') {
+                const payload = tc.payload || { actionType: 'emitEvent', target: tc.args?.animationName || tc.args?.gesture || tc.args?.target };
+                console.log('[FloatingAssistant] Constructed 3D Payload:', payload);
+                const w = window as any;
+                
+                // Use our direct, bulletproof bypass function
+                if (typeof w.playRobotAnimation === 'function') {
+                    console.log('[FloatingAssistant] Calling window.playRobotAnimation with:', payload.target);
+                    w.playRobotAnimation(payload.target);
+                } else if (w.Synapse3D && w.Synapse3D.app) {
+                    w.Synapse3D.app.userData.synapseValue = payload;
+                    console.log('[FloatingAssistant] Injected payload into Three.js scene Object3D:', w.Synapse3D.app);
+                } else {
+                    console.error('[FloatingAssistant] No 3D interaction hook found! Cannot forward 3D signal.');
+                }
+            }
+        });
     }
   }, [messages, processSignals]);
 
@@ -94,52 +118,52 @@ export function FloatingAssistant() {
   ];
 
   return (
-    <div className={`synapse-assistant-bundle ${isAssistantOpen ? 'is-open' : ''}`}>
+    <>
       <button 
         id="synapse-fab" 
-        className="synapse-fab"
+        className="assistant-fab"
         onClick={() => setIsAssistantOpen(!isAssistantOpen)}
       >
-        <div className="fab-icon">{isAssistantOpen ? '✕' : '⚡'}</div>
+        <div className="fab-icon" style={{ fontSize: '1.5rem' }}>{isAssistantOpen ? '✕' : '⚡'}</div>
       </button>
 
-      <div className="synapse-chat-panel">
-        <div className="chat-header">
-          <div className="agent-avatar">⚡</div>
-          <div className="agent-info">
-            <div className="agent-name">Synapse Agent</div>
-            <div className="agent-status">Online</div>
+      {/* Assistant Widget */}
+      <div id="synapse-assistant" className={isAssistantOpen ? 'active' : ''}>
+        <div className="assistant-header">
+          <div style={{display:'flex', alignItems:'center', gap:'0.75rem'}}>
+            <div className="fab-icon" style={{background:'var(--accent)', borderRadius:'50%', width:32, height:32, display:'flex', alignItems:'center', justifyContent:'center', fontSize:'1rem'}}>⚡</div>
+            <span className="assistant-title">Synapse Agent</span>
           </div>
+          <span className="assistant-status">Online</span>
         </div>
         
-        <div className="chat-body">
-            {chatMessages.map((m, i) => (
-                <div key={i} className={`chat-bubble-container ${m.role}`}>
-                    <div className="chat-bubble" dangerouslySetInnerHTML={{ __html: m.text }} />
-                </div>
-            ))}
-            {isLoading && (
-                <div className="chat-bubble-container ai">
-                    <div className="chat-bubble loading-dots">
-                        <span>.</span><span>.</span><span>.</span>
-                    </div>
-                </div>
-            )}
+        <div className="assistant-chat" id="chat-box">
+          {chatMessages.map((m, i) => (
+            <div key={i} className={`msg ${m.role === 'ai' ? 'msg-ai' : 'msg-user'}`} dangerouslySetInnerHTML={{ __html: m.text }} />
+          ))}
+          {isLoading && (
+            <div className="msg msg-ai loading-dots">
+              <span>.</span><span>.</span><span>.</span>
+            </div>
+          )}
         </div>
 
-        <div className="chat-footer">
+        <div className="assistant-input-row">
           <input 
             type="text" 
+            id="ai-input" 
             placeholder="Type a command..." 
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') handleSend();
+            }}
           />
-          <button id="chat-send-btn" onClick={handleSend} disabled={isLoading}>
-            Send
+          <button className="send-btn" id="chat-send-btn" onClick={handleSend} disabled={isLoading}>
+            ➙
           </button>
         </div>
       </div>
-    </div>
+    </>
   );
 }

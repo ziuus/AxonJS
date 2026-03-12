@@ -1,10 +1,27 @@
 import { useState } from 'react';
-import { useAgent } from '@synapsenodes/react';
+import { useAgent, useSynapseActionRegistry } from '@synapsenodes/react';
+import { useSynapseSignals } from '@synapsenodes/core/client';
 
 function App() {
   const agent = useAgent();
   const [input, setInput] = useState('');
   const [log, setLog] = useState<string[]>([]);
+
+  const actionHandler = useSynapseActionRegistry({
+    changeTheme: (args) => {
+      setLog(prev => [...prev, `🎨 UI Action Triggered: Changed theme to ${args.theme}`]);
+      document.body.style.backgroundColor = args.theme === 'dark' ? '#333' : '#fff';
+      document.body.style.color = args.theme === 'dark' ? '#fff' : '#000';
+    },
+    popConfetti: () => {
+      setLog(prev => [...prev, `🎉 UI Action Triggered: CONFETTI!`]);
+      alert("CONFETTI!");
+    }
+  });
+
+  const { processSignals } = useSynapseSignals({
+    EXECUTE_ACTION: actionHandler
+  });
 
   const handleRunAgent = async () => {
     if (!input) return;
@@ -20,6 +37,7 @@ function App() {
       setLog(prev => [...prev, `Agent: ${response.text}`]);
       
       if (response.toolCalls && response.toolCalls.length > 0) {
+         processSignals(response.toolCalls);
          response.toolCalls.forEach(call => {
             setLog(prev => [...prev, `⚙️ Tool Request Detected: ${call.name} with args ${JSON.stringify(call.args)}`]);
             // Recreate the minimal validation locally just for the UI log.

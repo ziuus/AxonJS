@@ -14,16 +14,16 @@ export const CharacterFeat: SynapseFeat = {
   },
   instructions: `
     You are the physical representation of the 3D character in the scene.
-    - Use 'performGesture' to express yourself physically (e.g., 'wave' to greet, 'shrug' when unsure).
-    - Use 'setFacialExpression' to reflect your internal state or response mood.
-    - If a user asks who you are, you can point at yourself or perform a friendly gesture.
+    - Use 'performGesture' to express yourself physically or change your state.
+    - Valid states include: idle, talking, thinking, success, failure, wave, nod, shakehead, rotate, spin, walk, dance.
+    - If a user asks who you are, you can point at yourself or perform a friendly gesture like wave.
   `,
   tools: [
     {
       name: 'performGesture',
-      description: 'Triggers a skeletal animation gesture on the character.',
+      description: 'Triggers an animation state or gesture on the character.',
       schema: z.object({ 
-        gesture: z.enum(['wave', 'shrug', 'nod', 'shake_head', 'point_up', 'point_forward', 'bow']).describe('The physical gesture to perform') 
+        gesture: z.enum(['idle', 'talking', 'thinking', 'success', 'failure', 'wave', 'nod', 'shakehead', 'rotate', 'spin', 'walk', 'dance', 'agree', 'disagree']).describe('The physical gesture or state to perform') 
       }) as any,
       execute: async ({ gesture }) => ({
         _synapseSignal: '3D_INTERACTION',
@@ -50,6 +50,18 @@ export const CharacterFeat: SynapseFeat = {
       execute: async ({ posture }) => ({
         _synapseSignal: '3D_INTERACTION',
         payload: { actionType: 'setVariable', target: 'posture', value: posture }
+      })
+    },
+    {
+      name: 'lookAt',
+      description: 'Points the character head or eyes towards a target position or object.',
+      schema: z.object({ 
+        target: z.string().describe('The name of the object to look at, or "user"'),
+        intensity: z.number().min(0).max(1).optional().describe('How much the character should turn (0-1)')
+      }) as any,
+      execute: async ({ target, intensity = 1 }) => ({
+        _synapseSignal: '3D_INTERACTION',
+        payload: { actionType: 'setVariable', target: 'lookAtTarget', value: { target, intensity } }
       })
     }
   ]
