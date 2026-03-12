@@ -1,14 +1,70 @@
 // src/SynapseProvider.tsx
 import { createContext, useContext, useEffect } from "react";
 import { jsx } from "react/jsx-runtime";
+var SYNAPSE_THEMES = {
+  AURORA: {
+    colors: {
+      primary: "#6366f1",
+      secondary: "#a855f7",
+      accent: "#38bdf8",
+      surface: "rgba(255, 255, 255, 0.05)",
+      text: "#f8fafc",
+      background: "#020617"
+    },
+    typography: {
+      fontMain: "'Inter', sans-serif",
+      fontMono: "'JetBrains Mono', monospace"
+    },
+    effects: {
+      glassmorphism: 0.6,
+      glow: 1
+    }
+  },
+  MIDNIGHT: {
+    colors: {
+      primary: "#f43f5e",
+      secondary: "#fb923c",
+      accent: "#facc15",
+      surface: "rgba(0, 0, 0, 0.2)",
+      text: "#ffffff",
+      background: "#000000"
+    },
+    typography: {
+      fontMain: "'Space Grotesk', sans-serif",
+      fontMono: "'JetBrains Mono', monospace"
+    },
+    effects: {
+      glassmorphism: 0.8,
+      glow: 1.5
+    }
+  }
+};
 var SynapseContext = createContext(null);
-function SynapseProvider({ runtime, feats, children }) {
+function SynapseProvider({
+  runtime,
+  feats,
+  theme = SYNAPSE_THEMES.AURORA,
+  themeMode = "dark",
+  children
+}) {
   useEffect(() => {
     if (feats) {
       feats.forEach((feat) => runtime.loadFeat(feat));
     }
   }, [runtime, feats]);
-  return /* @__PURE__ */ jsx(SynapseContext.Provider, { value: { agent: runtime }, children });
+  useEffect(() => {
+    const root = document.documentElement;
+    Object.entries(theme.colors).forEach(([key, val]) => {
+      root.style.setProperty(`--synapse-${key}`, val);
+    });
+    root.style.setProperty("--synapse-font-main", theme.typography.fontMain);
+    root.style.setProperty("--synapse-font-mono", theme.typography.fontMono);
+    root.style.setProperty("--synapse-glass", theme.effects.glassmorphism.toString());
+    root.style.setProperty("--synapse-glow", theme.effects.glow.toString());
+    root.classList.remove("synapse-dark", "synapse-light");
+    root.classList.add(`synapse-${themeMode}`);
+  }, [theme, themeMode]);
+  return /* @__PURE__ */ jsx(SynapseContext.Provider, { value: { agent: runtime, theme, themeMode }, children });
 }
 function useAgent() {
   const context = useContext(SynapseContext);
@@ -16,6 +72,13 @@ function useAgent() {
     throw new Error("useAgent must be used within an SynapseProvider");
   }
   return context.agent;
+}
+function useTheme() {
+  const context = useContext(SynapseContext);
+  if (!context) {
+    throw new Error("useTheme must be used within an SynapseProvider");
+  }
+  return { theme: context.theme, themeMode: context.themeMode };
 }
 
 // src/useSynapse3D.ts
@@ -273,11 +336,19 @@ function SynapseAvatar({
     return /* @__PURE__ */ jsxs(Fragment, { children: [
       /* @__PURE__ */ jsx2("ambientLight", { intensity: 0.4 }),
       /* @__PURE__ */ jsx2("spotLight", { position: [10, 10, 10], angle: 0.15, penumbra: 1, intensity: 1 }),
-      /* @__PURE__ */ jsx2("pointLight", { ref: lightRef, position: [2, 2, 2], color: "#6366f1", intensity: 1 })
+      /* @__PURE__ */ jsx2(
+        "pointLight",
+        {
+          ref: lightRef,
+          position: [2, 2, 2],
+          color: "var(--synapse-primary, #6366f1)",
+          intensity: 1
+        }
+      )
     ] });
   };
   return /* @__PURE__ */ jsxs("div", { className, children: [
-    showBadge && /* @__PURE__ */ jsx2("div", { className: "absolute top-4 left-4 z-10 bg-black/60 px-3 py-1.5 rounded-full border border-white/10 text-xs font-mono text-white/70", children: "GLTF RUNTIME (SYNAPSE AVATAR)" }),
+    showBadge && /* @__PURE__ */ jsx2("div", { className: "absolute top-4 left-4 z-10 bg-black/60 px-3 py-1.5 rounded-full border border-white/10 text-xs font-mono text-white/70", style: { fontFamily: "var(--synapse-font-mono)" }, children: "GLTF RUNTIME (SYNAPSE AVATAR)" }),
     /* @__PURE__ */ jsxs(Canvas, { camera: { position: [0, 0, 6], fov: 45 }, children: [
       /* @__PURE__ */ jsx2(SceneLights, {}),
       /* @__PURE__ */ jsxs(Suspense, { fallback: null, children: [
@@ -425,11 +496,13 @@ function useSynapseActionRegistry(actions) {
 import { createAgent, Agent } from "@synapsenodes/core";
 export {
   Agent,
+  SYNAPSE_THEMES,
   SynapseAvatar,
   SynapseProvider,
   createAgent,
   useAgent,
   useSynapse3D,
   useSynapseActionRegistry,
-  useSynapseSpeech
+  useSynapseSpeech,
+  useTheme
 };

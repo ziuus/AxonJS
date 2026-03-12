@@ -3,13 +3,41 @@ import { ReactNode } from 'react';
 import { Agent, SynapseFeat } from '@synapsenodes/core';
 export { Agent, createAgent } from '@synapsenodes/core';
 
+interface SynapseTheme {
+    colors: {
+        primary: string;
+        secondary: string;
+        accent: string;
+        surface: string;
+        text: string;
+        background: string;
+    };
+    typography: {
+        fontMain: string;
+        fontMono: string;
+    };
+    effects: {
+        glassmorphism: number;
+        glow: number;
+    };
+}
+declare const SYNAPSE_THEMES: {
+    AURORA: SynapseTheme;
+    MIDNIGHT: SynapseTheme;
+};
 interface SynapseProviderProps {
     runtime: Agent;
     feats?: SynapseFeat[];
+    theme?: SynapseTheme;
+    themeMode?: 'dark' | 'light';
     children: ReactNode;
 }
-declare function SynapseProvider({ runtime, feats, children }: SynapseProviderProps): react_jsx_runtime.JSX.Element;
+declare function SynapseProvider({ runtime, feats, theme, themeMode, children }: SynapseProviderProps): react_jsx_runtime.JSX.Element;
 declare function useAgent(): Agent;
+declare function useTheme(): {
+    theme: SynapseTheme;
+    themeMode: "dark" | "light";
+};
 
 /**
  * Hook to register a 3D application (e.g., Spline) for SynapseJS interoperability.
@@ -97,4 +125,4 @@ type SynapseActionHandler = (args: any) => void | Promise<void>;
  */
 declare function useSynapseActionRegistry(actions: Record<string, SynapseActionHandler>): (payload: any) => void;
 
-export { type SynapseActionHandler, SynapseAvatar, SynapseProvider, type SynapseProviderProps, useAgent, useSynapse3D, useSynapseActionRegistry, useSynapseSpeech };
+export { SYNAPSE_THEMES, type SynapseActionHandler, SynapseAvatar, SynapseProvider, type SynapseProviderProps, type SynapseTheme, useAgent, useSynapse3D, useSynapseActionRegistry, useSynapseSpeech, useTheme };

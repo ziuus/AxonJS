@@ -248,7 +248,12 @@ export function SynapseAvatar({
         <>
           <ambientLight intensity={0.4} />
           <spotLight position={[10, 10, 10]} angle={0.15} penumbra={1} intensity={1} />
-          <pointLight ref={lightRef} position={[2, 2, 2]} color="#6366f1" intensity={1} />
+          <pointLight 
+            ref={lightRef} 
+            position={[2, 2, 2]} 
+            color="var(--synapse-primary, #6366f1)" 
+            intensity={1} 
+          />
         </>
     );
   }
@@ -256,7 +261,7 @@ export function SynapseAvatar({
   return (
     <div className={className}>
       {showBadge && (
-        <div className="absolute top-4 left-4 z-10 bg-black/60 px-3 py-1.5 rounded-full border border-white/10 text-xs font-mono text-white/70">
+        <div className="absolute top-4 left-4 z-10 bg-black/60 px-3 py-1.5 rounded-full border border-white/10 text-xs font-mono text-white/70" style={{ fontFamily: 'var(--synapse-font-mono)' }}>
           GLTF RUNTIME (SYNAPSE AVATAR)
         </div>
       )}

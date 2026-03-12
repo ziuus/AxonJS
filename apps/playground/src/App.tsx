@@ -82,7 +82,7 @@ function App() {
           placeholder="e.g. Can you navigate to the dashboard?"
           onKeyDown={e => e.key === 'Enter' && handleRunAgent()}
         />
-        <button style={{ padding: '0.5rem 1rem' }} onClick={handleRunAgent}>Send</button>
+        <button style={{ padding: '0.5rem 1rem', background: 'var(--synapse-primary, #444)', color: 'var(--synapse-text, #fff)', border: 'none', borderRadius: '4px', cursor: 'pointer' }} onClick={handleRunAgent}>Send</button>
       </div>
     </div>
   )
