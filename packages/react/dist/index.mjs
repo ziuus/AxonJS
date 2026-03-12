@@ -492,17 +492,91 @@ function useSynapseActionRegistry(actions) {
   };
 }
 
+// src/useSynapseSignals.ts
+import { useState as useState3, useCallback as useCallback2, useRef as useRef4 } from "react";
+function useSynapseSignals(options = {}) {
+  const agent = useAgent();
+  const [signals, setSignals] = useState3([]);
+  const [isProcessing, setIsProcessing] = useState3(false);
+  const optionsRef = useRef4(options);
+  optionsRef.current = options;
+  const processSignals = useCallback2(async (toolCalls) => {
+    for (const call of toolCalls) {
+      const type = call.name.toUpperCase();
+      const handler = optionsRef.current[type];
+      if (handler) {
+        await handler(call.args);
+      }
+    }
+  }, []);
+  const runAgent = useCallback2(async (input) => {
+    if (!input.trim() || isProcessing) return;
+    setIsProcessing(true);
+    setSignals((prev) => [...prev, { type: "user", content: input }]);
+    try {
+      const response = await agent.run([{ role: "user", content: input }]);
+      const agentSignal = {
+        type: "response",
+        content: response.text,
+        toolCalls: response.toolCalls
+      };
+      setSignals((prev) => [...prev, agentSignal]);
+      if (response.toolCalls && response.toolCalls.length > 0) {
+        await processSignals(response.toolCalls);
+      }
+      if (optionsRef.current.onSignal) {
+        optionsRef.current.onSignal(agentSignal);
+      }
+      return response;
+    } catch (error) {
+      console.error("[SynapseJS] Agent execution failed:", error);
+      setSignals((prev) => [...prev, { type: "error", content: error.message || "Unknown error occurred" }]);
+    } finally {
+      setIsProcessing(false);
+    }
+  }, [agent, isProcessing, processSignals]);
+  const clearSignals = useCallback2(() => setSignals([]), []);
+  return {
+    signals,
+    isProcessing,
+    runAgent,
+    processSignals,
+    clearSignals
+  };
+}
+
+// src/SuggestionChips.tsx
+import { jsx as jsx3 } from "react/jsx-runtime";
+var SuggestionChips = ({
+  suggestions,
+  onSelect,
+  className = "",
+  chipClassName = ""
+}) => {
+  return /* @__PURE__ */ jsx3("div", { className: `flex flex-wrap gap-2 ${className}`, children: suggestions.map((suggestion) => /* @__PURE__ */ jsx3(
+    "button",
+    {
+      onClick: () => onSelect(suggestion),
+      className: `px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-white/50 hover:text-white hover:border-white/30 text-xs transition-all ${chipClassName}`,
+      children: suggestion
+    },
+    suggestion
+  )) });
+};
+
 // src/index.ts
 import { createAgent, Agent } from "@synapsenodes/core";
 export {
   Agent,
   SYNAPSE_THEMES,
+  SuggestionChips,
   SynapseAvatar,
   SynapseProvider,
   createAgent,
   useAgent,
   useSynapse3D,
   useSynapseActionRegistry,
+  useSynapseSignals,
   useSynapseSpeech,
   useTheme
 };

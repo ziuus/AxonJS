@@ -32,12 +32,14 @@ var index_exports = {};
 __export(index_exports, {
   Agent: () => import_core.Agent,
   SYNAPSE_THEMES: () => SYNAPSE_THEMES,
+  SuggestionChips: () => SuggestionChips,
   SynapseAvatar: () => SynapseAvatar,
   SynapseProvider: () => SynapseProvider,
   createAgent: () => import_core.createAgent,
   useAgent: () => useAgent,
   useSynapse3D: () => useSynapse3D,
   useSynapseActionRegistry: () => useSynapseActionRegistry,
+  useSynapseSignals: () => useSynapseSignals,
   useSynapseSpeech: () => useSynapseSpeech,
   useTheme: () => useTheme
 });
@@ -537,18 +539,92 @@ function useSynapseActionRegistry(actions) {
   };
 }
 
+// src/useSynapseSignals.ts
+var import_react6 = require("react");
+function useSynapseSignals(options = {}) {
+  const agent = useAgent();
+  const [signals, setSignals] = (0, import_react6.useState)([]);
+  const [isProcessing, setIsProcessing] = (0, import_react6.useState)(false);
+  const optionsRef = (0, import_react6.useRef)(options);
+  optionsRef.current = options;
+  const processSignals = (0, import_react6.useCallback)(async (toolCalls) => {
+    for (const call of toolCalls) {
+      const type = call.name.toUpperCase();
+      const handler = optionsRef.current[type];
+      if (handler) {
+        await handler(call.args);
+      }
+    }
+  }, []);
+  const runAgent = (0, import_react6.useCallback)(async (input) => {
+    if (!input.trim() || isProcessing) return;
+    setIsProcessing(true);
+    setSignals((prev) => [...prev, { type: "user", content: input }]);
+    try {
+      const response = await agent.run([{ role: "user", content: input }]);
+      const agentSignal = {
+        type: "response",
+        content: response.text,
+        toolCalls: response.toolCalls
+      };
+      setSignals((prev) => [...prev, agentSignal]);
+      if (response.toolCalls && response.toolCalls.length > 0) {
+        await processSignals(response.toolCalls);
+      }
+      if (optionsRef.current.onSignal) {
+        optionsRef.current.onSignal(agentSignal);
+      }
+      return response;
+    } catch (error) {
+      console.error("[SynapseJS] Agent execution failed:", error);
+      setSignals((prev) => [...prev, { type: "error", content: error.message || "Unknown error occurred" }]);
+    } finally {
+      setIsProcessing(false);
+    }
+  }, [agent, isProcessing, processSignals]);
+  const clearSignals = (0, import_react6.useCallback)(() => setSignals([]), []);
+  return {
+    signals,
+    isProcessing,
+    runAgent,
+    processSignals,
+    clearSignals
+  };
+}
+
+// src/SuggestionChips.tsx
+var import_jsx_runtime3 = require("react/jsx-runtime");
+var SuggestionChips = ({
+  suggestions,
+  onSelect,
+  className = "",
+  chipClassName = ""
+}) => {
+  return /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("div", { className: `flex flex-wrap gap-2 ${className}`, children: suggestions.map((suggestion) => /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(
+    "button",
+    {
+      onClick: () => onSelect(suggestion),
+      className: `px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-white/50 hover:text-white hover:border-white/30 text-xs transition-all ${chipClassName}`,
+      children: suggestion
+    },
+    suggestion
+  )) });
+};
+
 // src/index.ts
 var import_core = require("@synapsenodes/core");
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
   Agent,
   SYNAPSE_THEMES,
+  SuggestionChips,
   SynapseAvatar,
   SynapseProvider,
   createAgent,
   useAgent,
   useSynapse3D,
   useSynapseActionRegistry,
+  useSynapseSignals,
   useSynapseSpeech,
   useTheme
 });

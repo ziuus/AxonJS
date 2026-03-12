@@ -1,5 +1,6 @@
 import * as react_jsx_runtime from 'react/jsx-runtime';
-import { ReactNode } from 'react';
+import React, { ReactNode } from 'react';
+import * as _synapsenodes_core from '@synapsenodes/core';
 import { Agent, SynapseFeat } from '@synapsenodes/core';
 export { Agent, createAgent } from '@synapsenodes/core';
 
@@ -125,4 +126,30 @@ type SynapseActionHandler = (args: any) => void | Promise<void>;
  */
 declare function useSynapseActionRegistry(actions: Record<string, SynapseActionHandler>): (payload: any) => void;
 
-export { SYNAPSE_THEMES, type SynapseActionHandler, SynapseAvatar, SynapseProvider, type SynapseProviderProps, type SynapseTheme, useAgent, useSynapse3D, useSynapseActionRegistry, useSynapseSpeech, useTheme };
+interface SynapseSignal {
+    type: string;
+    content: string;
+    toolCalls?: any[];
+    payload?: any;
+}
+interface UseSynapseSignalsOptions {
+    onSignal?: (signal: SynapseSignal) => void;
+    [key: string]: any;
+}
+declare function useSynapseSignals(options?: UseSynapseSignalsOptions): {
+    signals: SynapseSignal[];
+    isProcessing: boolean;
+    runAgent: (input: string) => Promise<_synapsenodes_core.AgentResponse | undefined>;
+    processSignals: (toolCalls: any[]) => Promise<void>;
+    clearSignals: () => void;
+};
+
+interface SuggestionChipsProps {
+    suggestions: string[];
+    onSelect: (suggestion: string) => void;
+    className?: string;
+    chipClassName?: string;
+}
+declare const SuggestionChips: React.FC<SuggestionChipsProps>;
+
+export { SYNAPSE_THEMES, SuggestionChips, type SuggestionChipsProps, type SynapseActionHandler, SynapseAvatar, SynapseProvider, type SynapseProviderProps, type SynapseSignal, type SynapseTheme, type UseSynapseSignalsOptions, useAgent, useSynapse3D, useSynapseActionRegistry, useSynapseSignals, useSynapseSpeech, useTheme };

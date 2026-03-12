@@ -7,8 +7,8 @@ import { ActionFeat } from '@synapsenodes/core';
 import { z } from 'zod';
 
 const runtime = createAgent({
-  llmProvider: import.meta.env.VITE_GEMINI_API_KEY ? 'gemini' : (import.meta.env.VITE_OPENAI_API_KEY ? 'openai' : 'mock'),
-  apiKey: import.meta.env.VITE_GEMINI_API_KEY || import.meta.env.VITE_OPENAI_API_KEY,
+  llmProvider: import.meta.env.VITE_GROQ_API_KEY ? 'groq' : (import.meta.env.VITE_GEMINI_API_KEY ? 'gemini' : 'openai'),
+  apiKey: import.meta.env.VITE_GROQ_API_KEY || import.meta.env.VITE_GEMINI_API_KEY || import.meta.env.VITE_OPENAI_API_KEY,
   memory: 'session'
 });
 
