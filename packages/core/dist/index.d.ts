@@ -1,5 +1,5 @@
-import { T as Tool, a as AgentConfig, S as SynapseFeat, b as SynapseSignal, C as CoreMessage, c as AgentResponse } from './types-LEi5PNk5.js';
-export { A as AgentSignalHandler, F as FeatManifest, M as MessagePart, d as SYNAPSE_TOOL_NAMES, e as SynapseSignalType, f as SynapseToolName } from './types-LEi5PNk5.js';
+import { T as Tool, a as AgentConfig, S as SynapseFeat, b as SynapseSignal, C as CoreMessage, c as AgentResponse } from './types-D9Azr5AG.js';
+export { A as AgentSignalHandler, F as FeatManifest, M as MessagePart, d as SYNAPSE_TOOL_NAMES, e as SynapseSignalType, f as SynapseToolName } from './types-D9Azr5AG.js';
 import { z } from 'zod';
 
 /**
@@ -124,10 +124,12 @@ interface ActionFeatConfig {
     actions: ActionDefinition[];
 }
 /**
- * ActionFeat - Agentic Co-Browsing
- * Exposes a generic `executeAction` tool to the LLM.
- * The LLM can call this tool with a specific `actionId` and arguments,
- * which emits an EXECUTE_ACTION signal for the frontend to handle.
+ * ActionFeat - Agentic Co-Browsing (v2 - Multi-Step Orchestration)
+ *
+ * Exposes three tools to the LLM:
+ * 1. `executeAction` - Execute a single registered frontend action.
+ * 2. `reportActionStatus` - Emit an intermediate status update/progress message to the UI.
+ * 3. `executeActionSequence` - Chain multiple actions in a defined sequence, with progress reporting.
  */
 declare function ActionFeat(config: ActionFeatConfig): SynapseFeat;
 

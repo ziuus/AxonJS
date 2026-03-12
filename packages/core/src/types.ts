@@ -62,7 +62,9 @@ export type SynapseSignalType =
   | 'CHECKBOX_TOGGLE'
   | 'SET_THEME'
   | 'CAPTURE_SCREENSHOT'
-  | 'EXECUTE_ACTION';
+  | 'EXECUTE_ACTION'
+  | 'ACTION_STATUS_UPDATE'
+  | 'EXECUTE_ACTION_SEQUENCE';
 
 /** The base shape of every signal returned by a built-in Axon tool */
 export interface SynapseSignal<T = unknown> {

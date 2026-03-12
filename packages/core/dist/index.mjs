@@ -788,7 +788,7 @@ function ActionFeat(config) {
   const actionEnums = config.actions.map((a) => a.id);
   const executeActionTool = {
     name: "executeAction",
-    description: "Execute a pre-registered frontend action by ID. Look at the system instructions for available actions and their required arguments.",
+    description: "Execute a single pre-registered frontend action by its ID.",
     schema: z6.object({
       actionId: z6.enum(actionEnums).describe("The ID of the action to execute"),
       args: z6.record(z6.any()).optional().describe("JSON object containing the arguments for the action")
@@ -800,19 +800,58 @@ function ActionFeat(config) {
       };
     }
   };
+  const reportActionStatusTool = {
+    name: "reportActionStatus",
+    description: `Report an intermediate progress status to the user's UI during a multi-step task. Use this to keep the user informed (e.g., "Scanning for submit button...", "Filling form fields...").`,
+    schema: z6.object({
+      message: z6.string().describe("A short, human-readable status message describing what the agent is currently doing."),
+      step: z6.number().optional().describe("Optional current step number (1-indexed) for multi-step tasks."),
+      totalSteps: z6.number().optional().describe("Optional total number of steps in the task.")
+    }),
+    execute: async ({ message, step, totalSteps }) => {
+      return {
+        _synapseSignal: "ACTION_STATUS_UPDATE",
+        payload: { message, step, totalSteps }
+      };
+    }
+  };
+  const executeActionSequenceTool = {
+    name: "executeActionSequence",
+    description: "Execute a sequence of pre-registered frontend actions in order. Use this for multi-step tasks where you need to perform several actions (e.g., navigate then fill form then submit). Each step is executed in order.",
+    schema: z6.object({
+      steps: z6.array(z6.object({
+        actionId: z6.enum(actionEnums).describe("The ID of the action to execute in this step."),
+        args: z6.record(z6.any()).optional().describe("Arguments for this step."),
+        statusMessage: z6.string().optional().describe("A status message to display to the user before executing this step.")
+      })).describe("An ordered array of action steps to execute in sequence."),
+      description: z6.string().optional().describe("A human-readable summary of what this sequence accomplishes.")
+    }),
+    execute: async ({ steps, description }) => {
+      return {
+        _synapseSignal: "EXECUTE_ACTION_SEQUENCE",
+        payload: { steps, description }
+      };
+    }
+  };
   const actionDescriptions = config.actions.map(
     (a) => `- **${a.id}**: ${a.description}`
   ).join("\n");
   return {
     manifest: {
       name: "ActionFeat",
-      version: "1.0.0",
-      description: "Agentic Co-browsing tool registry for custom frontend functions"
+      version: "2.0.0",
+      description: "Agentic Co-browsing with multi-step orchestration support"
     },
-    tools: [executeActionTool],
-    instructions: `You have access to the following custom frontend actions via the 'executeAction' tool:
+    tools: [executeActionTool, reportActionStatusTool, executeActionSequenceTool],
+    instructions: `You have access to the following custom frontend actions:
 ${actionDescriptions}
-To trigger one of these, use executeAction({ actionId: "...", args: {...} }).`
+
+Tools available:
+- **executeAction**: Run a single action immediately.
+- **reportActionStatus**: Emit a progress message to the UI (use this between steps of complex tasks).
+- **executeActionSequence**: Chain multiple actions in sequence for multi-step tasks.
+
+For complex tasks (e.g., "fill out and submit the login form"), prefer using executeActionSequence with descriptive statusMessage fields for each step, so the user sees progress.`
   };
 }
 export {

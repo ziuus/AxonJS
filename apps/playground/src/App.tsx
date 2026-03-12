@@ -26,7 +26,25 @@ function App() {
   });
 
   const { processSignals } = useSynapseSignals({
-    EXECUTE_ACTION: actionHandler
+    EXECUTE_ACTION: actionHandler,
+    ACTION_STATUS_UPDATE: ({ message, step, totalSteps }: any) => {
+      const stepLabel = (step && totalSteps) ? ` [${step}/${totalSteps}]` : '';
+      setLog(prev => [...prev, { text: `⏳${stepLabel} ${message}`, type: 'system' }]);
+    },
+    EXECUTE_ACTION_SEQUENCE: async ({ steps, description }: any) => {
+      if (description) {
+        setLog(prev => [...prev, { text: `🔄 Starting sequence: ${description}`, type: 'system' }]);
+      }
+      for (let i = 0; i < steps.length; i++) {
+        const step = steps[i];
+        if (step.statusMessage) {
+          setLog(prev => [...prev, { text: `⏳ [${i + 1}/${steps.length}] ${step.statusMessage}`, type: 'system' }]);
+          await new Promise(r => setTimeout(r, 400)); // brief delay so user can see each step
+        }
+        await actionHandler({ actionId: step.actionId, args: step.args });
+      }
+      setLog(prev => [...prev, { text: `✅ Sequence complete.`, type: 'system' }]);
+    }
   });
 
   const handleRunAgent = async () => {
