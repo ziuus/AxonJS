@@ -361,6 +361,18 @@ ${feat.instructions}
     return fullPrompt;
   }
   /**
+   * Translates text into a basic sentiment state.
+   */
+  analyzeSentiment(text) {
+    const lower = text.toLowerCase();
+    if (lower.includes("great") || lower.includes("excellent") || lower.includes("awesome") || lower.includes("yay")) return "excited";
+    if (lower.includes("happy") || lower.includes("glad") || lower.includes("hello") || lower.includes("welcome") || lower.includes("hi there")) return "happy";
+    if (lower.includes("hmm") || lower.includes("let me think") || lower.includes("interesting") || lower.includes("analyzing")) return "thinking";
+    if (lower.includes("wow") || lower.includes("oh!") || lower.includes("really?")) return "surprised";
+    if (lower.includes("sorry") || lower.includes("apologize") || lower.includes("sad") || lower.includes("unfortunately")) return "sad";
+    return "neutral";
+  }
+  /**
    * Primary method to trigger the agent's reasoning loop.
    */
   async run(messages, context) {
@@ -368,10 +380,36 @@ ${feat.instructions}
     if (!this.config.apiKey && this.config.llmProvider !== "mock") {
       throw new Error(`SynapseJS Error: API key is missing in config for provider: ${this.config.llmProvider}`);
     }
+    let response;
     if (this.config.llmProvider === "groq") {
-      return this.runGroq(messages, context);
+      response = await this.runGroq(messages, context);
+    } else {
+      response = await this.runStandardProvider(messages, context);
     }
-    return this.runStandardProvider(messages, context);
+    const sentiment = this.analyzeSentiment(response.text);
+    if (sentiment !== "neutral") {
+      const animationMap = {
+        "happy": "Greeting",
+        "sad": "Defeat",
+        "thinking": "Thinking",
+        "surprised": "Surprise",
+        // Adjusted for typical 3D animation names
+        "excited": "Jump",
+        "neutral": "Idle"
+      };
+      response.toolCalls = response.toolCalls || [];
+      response.toolCalls.push({
+        name: "trigger3DAnimation",
+        args: { animationName: animationMap[sentiment] || "Idle" }
+      });
+      if (["happy", "sad", "thinking", "surprised"].includes(sentiment)) {
+        response.toolCalls.push({
+          name: "setCharacterEmotion",
+          args: { emotion: sentiment }
+        });
+      }
+    }
+    return response;
   }
   /**
    * Standard execution loop for providers with robust tool calling support (OpenAI, Anthropic, Gemini, etc.)

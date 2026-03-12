@@ -11,6 +11,8 @@ import { createPerplexity } from '@ai-sdk/perplexity';
 import { createCohere } from '@ai-sdk/cohere';
 import { z } from 'zod';
 
+export type SynapseSentiment = 'happy' | 'sad' | 'thinking' | 'surprised' | 'excited' | 'neutral';
+
 export class Agent {
   private config: AgentConfig;
   public tools: ToolRegistry;
@@ -338,6 +340,19 @@ export class Agent {
   }
 
   /**
+   * Translates text into a basic sentiment state.
+   */
+  private analyzeSentiment(text: string): SynapseSentiment {
+    const lower = text.toLowerCase();
+    if (lower.includes('great') || lower.includes('excellent') || lower.includes('awesome') || lower.includes('yay')) return 'excited';
+    if (lower.includes('happy') || lower.includes('glad') || lower.includes('hello') || lower.includes('welcome') || lower.includes('hi there')) return 'happy';
+    if (lower.includes('hmm') || lower.includes('let me think') || lower.includes('interesting') || lower.includes('analyzing')) return 'thinking';
+    if (lower.includes('wow') || lower.includes('oh!') || lower.includes('really?')) return 'surprised';
+    if (lower.includes('sorry') || lower.includes('apologize') || lower.includes('sad') || lower.includes('unfortunately')) return 'sad';
+    return 'neutral';
+  }
+
+  /**
    * Primary method to trigger the agent's reasoning loop.
    */
   async run(messages: CoreMessage[], context?: any): Promise<AgentResponse> {
@@ -347,13 +362,45 @@ export class Agent {
         throw new Error(`SynapseJS Error: API key is missing in config for provider: ${this.config.llmProvider}`);
     }
 
+    let response: AgentResponse;
+
     // Groq still uses the specialized manual parsing loop for maximum stability
     if (this.config.llmProvider === 'groq') {
-      return this.runGroq(messages, context);
+      response = await this.runGroq(messages, context);
+    } else {
+      // Generic handler for providers that support standard AISDK tool calling
+      response = await this.runStandardProvider(messages, context);
     }
 
-    // Generic handler for providers that support standard AISDK tool calling
-    return this.runStandardProvider(messages, context);
+    // --- SENTIMENT INJECTION ---
+    const sentiment = this.analyzeSentiment(response.text);
+    if (sentiment !== 'neutral') {
+      const animationMap: Record<SynapseSentiment, string> = {
+        'happy': 'Greeting',
+        'sad': 'Defeat',
+        'thinking': 'Thinking',
+        'surprised': 'Surprise', // Adjusted for typical 3D animation names
+        'excited': 'Jump',
+        'neutral': 'Idle'
+      };
+      
+      response.toolCalls = response.toolCalls || [];
+      // Implicitly trigger animation based on sentiment
+      response.toolCalls.push({
+        name: 'trigger3DAnimation',
+        args: { animationName: animationMap[sentiment] || 'Idle' }
+      });
+      
+      // Implicitly set emotion variable
+      if (['happy', 'sad', 'thinking', 'surprised'].includes(sentiment)) {
+        response.toolCalls.push({
+          name: 'setCharacterEmotion',
+          args: { emotion: sentiment }
+        });
+      }
+    }
+
+    return response;
   }
 
   /**

@@ -39,6 +39,7 @@ declare class ToolRegistry {
     execute(name: string, args: any): Promise<any>;
 }
 
+type SynapseSentiment = 'happy' | 'sad' | 'thinking' | 'surprised' | 'excited' | 'neutral';
 declare class Agent {
     private config;
     tools: ToolRegistry;
@@ -62,6 +63,10 @@ declare class Agent {
      * Aggregates default instructions with all loaded feat instructions.
      */
     private getFullSystemPrompt;
+    /**
+     * Translates text into a basic sentiment state.
+     */
+    private analyzeSentiment;
     /**
      * Primary method to trigger the agent's reasoning loop.
      */
@@ -126,4 +131,4 @@ interface ActionFeatConfig {
  */
 declare function ActionFeat(config: ActionFeatConfig): SynapseFeat;
 
-export { type ActionDefinition, ActionFeat, type ActionFeatConfig, Agent, AgentConfig, AgentResponse, CharacterFeat, CoreMessage, SynapseFeat, SynapseSignal, ThreeDFeat, Tool, ToolRegistry, UIInsightsFeat, VisionFeat, createAgent };
+export { type ActionDefinition, ActionFeat, type ActionFeatConfig, Agent, AgentConfig, AgentResponse, CharacterFeat, CoreMessage, SynapseFeat, type SynapseSentiment, SynapseSignal, ThreeDFeat, Tool, ToolRegistry, UIInsightsFeat, VisionFeat, createAgent };
