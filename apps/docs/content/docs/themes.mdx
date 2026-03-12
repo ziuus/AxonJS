@@ -1,0 +1,77 @@
+---
+title: Theming
+description: Customize the look and feel of SynapseJS components
+---
+
+SynapseJS comes with a powerful, CSS variable-based theming system that lets you customize the appearance of building blocks like the `SynapseAvatar`. This ensures that your AI agents seamlessly blend into your existing application's design system, whether you're using Tailwind CSS, styled-components, or vanilla CSS.
+
+## The SynapseProvider
+
+Theming is configured at the root of your application using the `<SynapseProvider>` component.
+
+```tsx
+import { SynapseProvider, themes } from '@synapsenodes/react';
+
+function App({ children }) {
+  return (
+    <SynapseProvider theme={themes.aurora}>
+      {children}
+    </SynapseProvider>
+  );
+}
+```
+
+## Built-in Themes
+
+SynapseJS exports several meticulously crafted themes out of the box under the `themes` object:
+
+- **`themes.midnight`**: A sleek, dark theme with high-contrast borders and subtle neon accents. Perfect for developer tools and premium dark-mode apps.
+- **`themes.aurora`**: A vibrant, glassmorphism-inspired theme with smooth gradients and translucent backgrounds. Ideal for creative and consumer-facing applications.
+- **`themes.light`**: A clean, accessible light theme with high legibility.
+
+## Custom Themes
+
+You can fully customize the look by passing your own `SynapseTheme` object. 
+
+```tsx
+import { SynapseProvider } from '@synapsenodes/react';
+import type { SynapseTheme } from '@synapsenodes/react';
+
+const myCustomTheme: SynapseTheme = {
+  colors: {
+    background: '#1a1a1a',
+    foreground: '#ffffff',
+    primary: '#ff3366',
+    border: 'rgba(255, 255, 255, 0.1)',
+    ring: 'rgba(255, 51, 102, 0.5)',
+  },
+  radius: '12px',
+  shadows: '0 4px 12px rgba(0, 0, 0, 0.5)',
+  backdropBlur: '10px'
+};
+
+function App() {
+  return <SynapseProvider theme={myCustomTheme}>...</SynapseProvider>;
+}
+```
+
+## CSS Variables
+
+Under the hood, the `<SynapseProvider>` injects these values as CSS variables on its wrapper `<div>`. If you're building custom UI components for your agents, you can consume these variables directly to ensure they match the active theme:
+
+- `--synapse-bg`: `theme.colors.background`
+- `--synapse-fg`: `theme.colors.foreground`
+- `--synapse-primary`: `theme.colors.primary`
+- `--synapse-border`: `theme.colors.border`
+- `--synapse-ring`: `theme.colors.ring`
+- `--synapse-radius`: `theme.radius`
+- `--synapse-shadow`: `theme.shadows`
+- `--synapse-blur`: `theme.backdropBlur`
+
+For example, using Tailwind CSS with custom arbitrary values:
+
+```tsx
+<div className="bg-[var(--synapse-bg)] text-[var(--synapse-fg)] rounded-[var(--synapse-radius)]">
+  Custom Agent Widget
+</div>
+```
