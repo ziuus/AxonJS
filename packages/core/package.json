@@ -23,11 +23,13 @@
   "scripts": {
     "build": "tsup src/index.ts src/client.ts --format cjs,esm --dts",
     "dev": "tsup src/index.ts src/client.ts --format cjs,esm --dts --watch",
-    "create-feat": "node scripts/create-feat.mjs"
+    "create-feat": "node scripts/create-feat.mjs",
+    "test": "vitest run"
   },
   "devDependencies": {
     "tsup": "^8.0.2",
-    "typescript": "^5.4.5"
+    "typescript": "^5.4.5",
+    "vitest": "^4.1.0"
   },
   "peerDependencies": {
     "react": ">=18",
